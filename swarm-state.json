@@ -1,0 +1,54 @@
+{
+    "timestamp": "2026-02-02T04:36:36Z",
+    "collectedBy": "collect-swarm-data.sh",
+    "agents": {
+        "iva": {
+            "status": "online",
+            "sessions": 0,
+            "tokensToday": 0,
+            "contextUsed": 0,
+            "contextMax": 200000,
+            "lastHeartbeat": "2026-02-02T04:36:36Z",
+            "currentTask": null,
+            "costToday": 0,
+            "messagesToday": 0,
+            "uptime": 100
+        },
+        "ivan": {
+            "status": "online",
+            "sessions": 0,
+            "tokensToday": 0,
+            "contextUsed": 0,
+            "contextMax": 128000,
+            "lastHeartbeat": "2026-02-02T04:36:36Z",
+            "currentTask": null,
+            "costToday": 0,
+            "messagesToday": 0,
+            "uptime": 100
+        },
+        "tia": {
+            "status": "online",
+            "sessions": 0,
+            "tokensToday": 0,
+            "contextUsed": 0,
+            "contextMax": 128000,
+            "lastHeartbeat": "2026-02-02T04:36:36Z",
+            "currentTask": null,
+            "costToday": 0,
+            "messagesToday": 0,
+            "uptime": 100
+        },
+        "joy": {
+            "status": "online",
+            "sessions": 0,
+            "tokensToday": 0,
+            "contextUsed": 0,
+            "contextMax": 128000,
+            "lastHeartbeat": "2026-02-02T04:36:36Z",
+            "currentTask": null,
+            "costToday": 0,
+            "messagesToday": 0,
+            "uptime": 100
+        }
+    }
+}

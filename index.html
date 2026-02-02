@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎯 Mission Control — OpenClaw Swarm</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎯</text></svg>">
+</head>
+<body>
+    <div class="app">
+        <!-- Animated Background -->
+        <div class="background">
+            <div class="bg-orb bg-orb-1"></div>
+            <div class="bg-orb bg-orb-2"></div>
+            <div class="bg-orb bg-orb-3"></div>
+            <div class="grid-overlay"></div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <!-- ===== 1. HEADER BAR ===== -->
+            <header class="header">
+                <div class="header-left">
+                    <span class="logo-icon">🎯</span>
+                    <h1>Mission Control</h1>
+                    <span class="header-badge">SWARM v1.0</span>
+                </div>
+                <div class="header-center">
+                    <div class="swarm-health" id="swarm-health">
+                        <span class="health-dot online"></span>
+                        <span class="health-label">Swarm Healthy</span>
+                    </div>
+                </div>
+                <div class="header-right">
+                    <div class="live-clock" id="live-clock">--:--:-- PST</div>
+                    <div class="refresh-info">
+                        <span class="last-refresh" id="last-refresh">Last refresh: --</span>
+                        <label class="auto-refresh-toggle">
+                            <input type="checkbox" id="auto-refresh" checked>
+                            <span class="toggle-slider"></span>
+                            <span class="toggle-label">Auto</span>
+                        </label>
+                    </div>
+                    <button class="btn-icon" id="refresh-btn" title="Refresh Now">⟳</button>
+                </div>
+            </header>
+
+            <!-- ===== 2. AGENT CARDS ROW ===== -->
+            <section class="agent-cards-row" id="agent-cards">
+                <!-- Cards injected by JS -->
+            </section>
+
+            <!-- ===== 3. SWARM STATS BAR ===== -->
+            <section class="swarm-stats-bar">
+                <div class="swarm-stat">
+                    <div class="swarm-stat-icon">💬</div>
+                    <div class="swarm-stat-content">
+                        <span class="swarm-stat-value" id="stat-sessions">0</span>
+                        <span class="swarm-stat-label">Active Sessions</span>
+                    </div>
+                </div>
+                <div class="swarm-stat">
+                    <div class="swarm-stat-icon">🔤</div>
+                    <div class="swarm-stat-content">
+                        <span class="swarm-stat-value" id="stat-tokens">0</span>
+                        <span class="swarm-stat-label">Tokens Today</span>
+                    </div>
+                </div>
+                <div class="swarm-stat">
+                    <div class="swarm-stat-icon">💰</div>
+                    <div class="swarm-stat-content">
+                        <span class="swarm-stat-value" id="stat-cost">$0.00</span>
+                        <span class="swarm-stat-label">Est. Cost Today</span>
+                    </div>
+                </div>
+                <div class="swarm-stat">
+                    <div class="swarm-stat-icon">⬆️</div>
+                    <div class="swarm-stat-content">
+                        <span class="swarm-stat-value" id="stat-uptime">0%</span>
+                        <span class="swarm-stat-label">Uptime</span>
+                    </div>
+                </div>
+                <div class="swarm-stat">
+                    <div class="swarm-stat-icon">📨</div>
+                    <div class="swarm-stat-content">
+                        <span class="swarm-stat-value" id="stat-messages">0</span>
+                        <span class="swarm-stat-label">Messages Today</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Main Grid: Kanban + Activity Feed -->
+            <div class="main-grid">
+
+                <!-- ===== 4. KANBAN TASK BOARD ===== -->
+                <section class="kanban-section">
+                    <div class="section-header">
+                        <h2>📋 Task Board</h2>
+                        <button class="btn-primary btn-sm" id="new-task-btn">
+                            <span>+</span> New Task
+                        </button>
+                    </div>
+                    <div class="kanban-board" id="kanban-board">
+                        <div class="kanban-column" data-status="inbox">
+                            <div class="column-header">
+                                <span class="column-icon">📥</span>
+                                <h3>Inbox</h3>
+                                <span class="task-count" data-count="inbox">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="inbox"></div>
+                        </div>
+                        <div class="kanban-column" data-status="assigned">
+                            <div class="column-header">
+                                <span class="column-icon">👤</span>
+                                <h3>Assigned</h3>
+                                <span class="task-count" data-count="assigned">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="assigned"></div>
+                        </div>
+                        <div class="kanban-column" data-status="in-progress">
+                            <div class="column-header">
+                                <span class="column-icon">⚡</span>
+                                <h3>In Progress</h3>
+                                <span class="task-count" data-count="in-progress">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="in-progress"></div>
+                        </div>
+                        <div class="kanban-column" data-status="review">
+                            <div class="column-header">
+                                <span class="column-icon">👀</span>
+                                <h3>Review</h3>
+                                <span class="task-count" data-count="review">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="review"></div>
+                        </div>
+                        <div class="kanban-column" data-status="done">
+                            <div class="column-header">
+                                <span class="column-icon">✅</span>
+                                <h3>Done</h3>
+                                <span class="task-count" data-count="done">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="done"></div>
+                        </div>
+                        <div class="kanban-column" data-status="blocked">
+                            <div class="column-header">
+                                <span class="column-icon">🚫</span>
+                                <h3>Blocked</h3>
+                                <span class="task-count" data-count="blocked">0</span>
+                            </div>
+                            <div class="column-tasks" data-status="blocked"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ===== 5. ACTIVITY FEED ===== -->
+                <aside class="activity-feed" id="activity-feed">
+                    <div class="section-header">
+                        <h2>📡 Activity Feed</h2>
+                        <span class="feed-live-badge">● LIVE</span>
+                    </div>
+                    <div class="feed-list" id="feed-list">
+                        <!-- Injected by JS -->
+                    </div>
+                </aside>
+            </div>
+
+            <!-- ===== 8. NETWORK TOPOLOGY ===== -->
+            <section class="network-section collapsible" id="network-section">
+                <div class="section-header clickable" data-toggle="network-content">
+                    <h2>🌐 Network Topology</h2>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div class="collapsible-content" id="network-content">
+                    <div class="topology-map" id="topology-map">
+                        <!-- SVG topology injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== 6. CRON JOBS PANEL ===== -->
+            <section class="cron-section collapsible" id="cron-section">
+                <div class="section-header clickable" data-toggle="cron-content">
+                    <h2>⏰ Cron Jobs</h2>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div class="collapsible-content" id="cron-content">
+                    <div class="cron-grid" id="cron-grid">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===== 7. COMMAND CENTER ===== -->
+            <section class="command-section collapsible" id="command-section">
+                <div class="section-header clickable" data-toggle="command-content">
+                    <h2>🖥️ Command Center</h2>
+                    <span class="collapse-icon">▼</span>
+                </div>
+                <div class="collapsible-content" id="command-content">
+                    <div class="command-grid">
+                        <div class="command-quick-actions" id="command-quick-actions">
+                            <!-- Injected by JS -->
+                        </div>
+                        <div class="command-input-area">
+                            <div class="command-target-row">
+                                <select id="command-target" class="command-select">
+                                    <option value="iva">🦹🏻‍♀️ Iva</option>
+                                    <option value="ivan">🤖 IVAN</option>
+                                    <option value="tia">🏠 T.I.A.</option>
+                                    <option value="joy">✨ JOY</option>
+                                </select>
+                                <input type="text" id="command-input" class="command-text-input" placeholder="Send a command to the selected bot...">
+                                <button class="btn-primary btn-sm" id="command-send">Send ⏎</button>
+                            </div>
+                            <div class="command-output" id="command-output">
+                                <div class="command-output-placeholder">Command output will appear here...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div><!-- /main-content -->
+    </div><!-- /app -->
+
+    <!-- ===== NEW TASK MODAL ===== -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>New Task</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="task-title">Title</label>
+                    <input type="text" id="task-title" placeholder="What needs to be done?" required>
+                </div>
+                <div class="form-group">
+                    <label for="task-description">Description</label>
+                    <textarea id="task-description" placeholder="Add details..." rows="3"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-assignee">Assignee</label>
+                        <select id="task-assignee">
+                            <option value="iva">🦹🏻‍♀️ Iva</option>
+                            <option value="ivan">🤖 IVAN</option>
+                            <option value="tia">🏠 T.I.A.</option>
+                            <option value="joy">✨ JOY</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-priority-input">Priority</label>
+                        <select id="task-priority-input">
+                            <option value="low">Low</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="high">High</option>
+                            <option value="urgent">Urgent</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="task-status-input">Status</label>
+                        <select id="task-status-input">
+                            <option value="inbox" selected>Inbox</option>
+                            <option value="assigned">Assigned</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="review">Review</option>
+                            <option value="done">Done</option>
+                            <option value="blocked">Blocked</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="task-due-input">Due Date</label>
+                        <input type="date" id="task-due-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="task-tags-input">Tags (comma-separated)</label>
+                    <input type="text" id="task-tags-input" placeholder="e.g., ars, marketing, dev">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" id="cancel-btn">Cancel</button>
+                    <div class="modal-actions-right">
+                        <button type="submit" class="btn-primary">Create Task</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== TASK DETAIL MODAL ===== -->
+    <div class="modal-overlay" id="detail-modal-overlay">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h2 id="detail-title">Task Detail</h2>
+                <button class="modal-close" id="detail-modal-close">&times;</button>
+            </div>
+            <div id="detail-body">
+                <!-- Injected by JS -->
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-danger" id="detail-delete-btn">Delete</button>
+                <div class="modal-actions-right">
+                    <button type="button" class="btn-secondary" id="detail-close-btn">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
