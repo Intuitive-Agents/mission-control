@@ -1,0 +1,11 @@
+name = "mission-control"
+pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "SWARM_STATE"
+id = "b7337e300d81499983d2261998f101e6"
+
+[[d1_databases]]
+binding = "CHAT_DB"
+database_name = "mc-chat-db"
+database_id = "537e2a9c-e5ee-493f-8fbf-4a45dad8b137"

@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClaw Mission Control V3</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        surface: { 900: '#0a0a0f', 800: '#0e0e16', 700: '#14141e', 600: '#1a1a2a' },
+                        accent: { blue: '#3b82f6', purple: '#8b5cf6', cyan: '#06b6d4', emerald: '#10b981', orange: '#f97316', pink: '#ec4899', red: '#ef4444', yellow: '#eab308' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --accent-purple: #8b5cf6;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+        }
+        * { box-sizing: border-box; }
+        body { background: var(--bg-primary); margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow-x: hidden; }
+
+        /* Animated Background Orbs */
+        @keyframes orbFloat {
+            0% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -40px) scale(1.05); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(40px, 30px) scale(1.02); }
+            100% { transform: translate(0, 0) scale(1); }
+        }
+        .bg-animated {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.12;
+            animation: orbFloat 20s ease-in-out infinite;
+        }
+        .bg-orb-1 {
+            width: 400px; height: 400px;
+            background: var(--accent-purple);
+            top: -100px; left: -100px;
+        }
+        .bg-orb-2 {
+            width: 350px; height: 350px;
+            background: var(--accent-blue);
+            bottom: -80px; right: -80px;
+            animation-delay: -7s;
+        }
+        .bg-orb-3 {
+            width: 300px; height: 300px;
+            background: var(--accent-green);
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -14s;
+        }
+        .bg-grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+
+        @keyframes move-x { from { left: -40px; } to { left: 100%; } }
+        @keyframes pulse-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        @keyframes data-flow { 0% { transform: translateX(-100%); } 100% { transform: translateX(400%); } }
+        @keyframes node-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.3); } 50% { box-shadow: 0 0 12px 4px rgba(59,130,246,0.15); } }
+        @keyframes slide-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink-cursor { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        @keyframes trace-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); } 50% { box-shadow: 0 0 16px 4px rgba(16,185,129,0.12); } }
+        @keyframes trace-pulse-red { 0%, 100% { box-shadow: 0 0 0 0 rgba(239,68,68,0.4); } 50% { box-shadow: 0 0 16px 4px rgba(239,68,68,0.12); } }
+        @keyframes trace-pulse-blue { 0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); } 50% { box-shadow: 0 0 16px 4px rgba(59,130,246,0.12); } }
+        @keyframes trace-pulse-purple { 0%, 100% { box-shadow: 0 0 0 0 rgba(139,92,246,0.4); } 50% { box-shadow: 0 0 16px 4px rgba(139,92,246,0.12); } }
+        @keyframes core-spin { 0% { opacity: 0.3; } 50% { opacity: 1; } 100% { opacity: 0.3; } }
+        @keyframes signal-flow { 0% { left: 0; opacity: 0; } 20% { opacity: 1; } 80% { opacity: 1; } 100% { left: calc(100% - 8px); opacity: 0; } }
+        @keyframes error-scan { 0% { background-position: 0% 0%; } 100% { background-position: 200% 0%; } }
+        @keyframes log-appear { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: translateX(0); } }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .grid-bg { background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px); background-size: 20px 20px; }
+        .reasoning-line { animation: slide-in 0.3s ease-out forwards; }
+        .trace-grid-bg { background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 16px 16px; }
+        .error-scanline { background: linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.08) 50%, transparent 100%); background-size: 200% 100%; animation: error-scan 2s linear infinite; }
+        /* Wallet card stack */
+        .wallet-stack { position: relative; perspective: 600px; }
+        .wallet-card { transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer; }
+        .wallet-card:hover { filter: brightness(1.08); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        /* ── V1 Color Palette Constants ── */
+        const COLORS = {
+            iva:            { border: '#8b5cf6', bg: 'rgba(139,92,246,0.1)',  text: '#a78bfa', dot: '#8b5cf6' },
+            ivan:           { border: '#692884', bg: 'rgba(105,40,132,0.1)',  text: '#9b59b6', dot: '#692884' },
+            arvis_sales:    { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
+            arvis_recruit:  { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
+            arvis_admin:    { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
+            arvis_prod:     { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
+            tia:            { border: '#f59e0b', bg: 'rgba(245,158,11,0.1)', text: '#fbbf24', dot: '#f59e0b' },
+            joy:            { border: '#60B1CF', bg: 'rgba(96,177,207,0.1)',  text: '#89C4DE', dot: '#60B1CF' },
+        };
+
+        /* ── Data ── */
+        const agents = [
+            { id: 'iva',           name: 'Iva',              role: "AGI Copilot",                        model: 'Claude Opus 4.6', modelColor: '#8b5cf6', status: 'online',   heart: '9s ago',  host: "Iva's Mac mini",  channels: ['Telegram', 'iMessage'], sessions: 0, contextUsed: 2,  contextMax: 200, load: 12, assignedTo: 'Nick — Intuitive Labs CEO' },
+            { id: 'ivan',          name: 'IVAN',             role: "Research / Creative / Content / SMM", model: 'Kimi K2.5',       modelColor: '#692884', status: 'sleeping', heart: '9h ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 4,  assignedTo: 'Nick — Intuitive Labs' },
+            { id: 'arvis_sales',   name: 'ARVIS (Sales)',    role: "Sales",                              model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '12s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 1, contextUsed: 18, contextMax: 128, load: 22, assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_recruit', name: 'ARVIS (Recruiter)',role: "Recruiting",                         model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '30s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 5,  contextMax: 128, load: 9,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_admin',   name: 'ARVIS (Admin)',    role: "Operations",                         model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '45s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 3,  contextMax: 128, load: 6,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_prod',    name: 'ARVIS (Production)', role: "Production",                       model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'sleeping', heart: '2h ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 2,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'tia',           name: 'TIA',              role: "Trenton's Assistant",                model: 'Kimi K2.5',       modelColor: '#f59e0b', status: 'online',   heart: '9s ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 8,  contextMax: 128, load: 14, assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'joy',           name: 'JOY',              role: "Gina's Assistant",                   model: 'Kimi K2.5',       modelColor: '#60B1CF', status: 'online',   heart: '9s ago',  host: "Iva's Mac mini",  channels: ['iMessage'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 5,  assignedTo: 'Gina Cordas' },
+        ];
+
+        /* ── Client Groups ── */
+        const clientGroups = [
+            {
+                id: 'intuitive', name: 'Intuitive Labs', subtitle: "Nick's org", icon: 'dot', color: '#8b5cf6',
+                agentIds: ['iva', 'ivan'],
+            },
+            {
+                id: 'ars', name: 'Arrow Roofing Services', subtitle: 'ARS (Client)', icon: 'dot', color: '#D3BA36',
+                agentIds: ['arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'tia'],
+            },
+            {
+                id: 'gbc', name: 'Gina', subtitle: 'GBC (Client)', icon: 'dot', color: '#005AA9',
+                agentIds: ['joy'],
+            },
+        ];
+
+        const initialBoardColumns = [
+            { id: 'inbox', title: 'INBOX', color: '#94a3b8', icon: 'inbox', tasks: [
+                { id: 1, title: 'Review ClickUp task backlog', desc: 'Go through Intuitive Labs ClickUp workspace and update...', agent: 'iva', priority: 'med', tags: ['HIS 3'] },
+                { id: 2, title: 'Notion prompt library — add 10 new prompts', desc: 'Curate and add ten high quality prompts to the Notion Prompt...', agent: 'joy', priority: 'low', tags: ['Fix 1'] },
+                { id: 3, title: 'Swarm cost optimization analysis', desc: 'Analyze token usage across all bots and find ways to reduce...', agent: 'iva', priority: 'low', tags: ['Fin 5'] },
+            ]},
+            { id: 'assigned', title: 'ASSIGNED', color: '#8b5cf6', icon: 'user-check', tasks: [
+                { id: 4, title: 'AccuLynx CRM sync — weekly leads report', desc: 'Pull latest leads from AccuLynx API and generate the weekly...', agent: 'tia', priority: 'med', tags: ['HIS 2'] },
+                { id: 5, title: 'IVAN onboarding docs', desc: 'Write documentation for how IVAN handles doc routing...', agent: 'ivan', priority: 'low', tags: ['Fix 5'] },
+                { id: 6, title: 'ARS Google Sheet action items update', desc: 'Sync the ARS action items Google Sheet with latest...', agent: 'tia', priority: 'high', tags: ['Fab 3'] },
+            ]},
+            { id: 'in_progress', title: 'IN PROGRESS', color: '#3b82f6', icon: 'loader', tasks: [
+                { id: 7, title: 'Deploy Mission Control to Cloudflare Pages', desc: 'Build and deploy the swarm dashboard to a *pages.dev URL...', agent: 'ivan', priority: 'high', tags: ['EMERGENCY'] },
+                { id: 8, title: 'Set up GoHighLevel automation for ARS', desc: 'Configure a new GHL workflow for lead...', agent: 'tia', priority: 'med', tags: [] },
+            ]},
+            { id: 'review', title: 'REVIEW', color: '#eab308', icon: 'eye', tasks: [
+                { id: 9, title: 'ARS roof inspection follow-up', desc: 'Send follow-up messages to 5 pending inspection leads in...', agent: 'tia', priority: 'high', tags: ['HIS 1'] },
+            ]},
+            { id: 'done', title: 'DONE', color: '#10b981', icon: 'check-circle', tasks: [
+                { id: 10, title: "Gina's grocery list — weekly prep", desc: "Help Gina organize her weekly grocery list and meal plan...", agent: 'joy', priority: 'low', tags: ['HIS 1'] },
+            ]},
+            { id: 'blocked', title: 'BLOCKED', color: '#ef4444', icon: 'alert-triangle', tasks: [
+                { id: 11, title: 'Fix BlueBubbles tunnel reconnection', desc: 'Cloudflare tunnel URL changes on restart — need a persistent...', agent: 'iva', priority: 'high', tags: ['Fix 7'] },
+            ]},
+        ];
+
+        const cronJobs = {
+            iva: [
+                { name: 'Email Inbox Check', cron: 'H 15 MIN', next: '', status: 'active' },
+                { name: 'Heartbeat Poll', cron: '4/15 * * * *', next: 'M 7 MIN', status: 'active' },
+                { name: 'Memory Maintenance', cron: '', next: 'TOMORROW 3:00 AM', status: 'active' },
+                { name: 'Daily Summary to Nick', cron: '0 22 * * *', next: 'TODAY 10:00 PM', status: 'active' },
+            ],
+            ivan: [
+                { name: 'ClickUp Sync', cron: 'H 1 DO MIN', next: '', status: 'active' },
+                { name: 'Heartbeat Poll', cron: '4/30 * * * *', next: 'M 3 MIN', status: 'active' },
+                { name: 'Content Calendar Publish', cron: '0 9 * * 1', next: 'MONDAY 9:00 AM', status: 'active' },
+            ],
+            arvis_sales: [
+                { name: 'AccuLynx Lead Sync', cron: '0 */2 * * *', next: 'M 45 MIN', status: 'active' },
+                { name: 'GHL Pipeline Update', cron: '0 8 * * *', next: 'TOMORROW 8:00 AM', status: 'active' },
+                { name: 'Follow-Up Drip Check', cron: '0 10,14 * * *', next: 'TODAY 2:00 PM', status: 'active' },
+            ],
+            arvis_recruit: [
+                { name: 'Indeed Scrape', cron: '0 7 * * 1-5', next: 'TOMORROW 7:00 AM', status: 'active' },
+                { name: 'Applicant Follow-Up', cron: '0 9 * * *', next: 'TOMORROW 9:00 AM', status: 'active' },
+            ],
+            arvis_admin: [
+                { name: 'Expense Report Sync', cron: '0 6 * * 1', next: 'MONDAY 6:00 AM', status: 'active' },
+                { name: 'Permit Status Check', cron: '0 8 * * 1-5', next: 'TOMORROW 8:00 AM', status: 'active' },
+            ],
+            arvis_prod: [
+                { name: 'Crew Schedule Sync', cron: '0 5 * * 1-5', next: 'TOMORROW 5:00 AM', status: 'paused' },
+                { name: 'Material Order Check', cron: '0 7 * * 1,3,5', next: 'WEDNESDAY 7:00 AM', status: 'active' },
+            ],
+            tia: [
+                { name: 'ARS Daily Lead Check', cron: 'M MONDAY 9:00 AM', next: '', status: 'active' },
+                { name: 'Weekly Report Generation', cron: '0 17 * 5', next: 'FRIDAY 5:00 PM', status: 'active' },
+                { name: 'GHL Workflow Monitor', cron: '0 4/6 * *', next: 'M 25', status: 'paused' },
+            ],
+            joy: [
+                { name: 'Morning Check-in', cron: '0 TOMORROW 8:00 AM', next: '', status: 'active' },
+                { name: 'Appointment Reminders', cron: '0 * * 5', next: 'M THURSDAY 7:00 AM', status: 'active' },
+                { name: 'Heartbeat Poll', cron: '4/30 * * * *', next: 'M 12 MIN', status: 'active' },
+            ],
+        };
+
+        const activityFeedData = [
+            { time: '4s ago', agent: 'iva', color: COLORS.iva.text, text: 'Started building Mission Control dashboard' },
+            { time: '1m ago', agent: 'arvis_sales', color: COLORS.arvis_sales.text, text: 'Synced 3 new leads from AccuLynx into GHL pipeline' },
+            { time: '5m ago', agent: 'joy', color: COLORS.joy.text, text: 'Sent recipe recommendations to Gina via iMessage' },
+            { time: '11m ago', agent: 'iva', color: COLORS.iva.text, text: 'Heartbeat OK — checked email, calendar' },
+            { time: '15m ago', agent: 'ivan', color: COLORS.ivan.text, text: 'Responded to dev squad question in Telegram' },
+            { time: '18m ago', agent: 'arvis_recruit', color: COLORS.arvis_recruit.text, text: 'Found 4 new roofing crew applicants on Indeed' },
+            { time: '22m ago', agent: 'tia', color: COLORS.tia.text, text: 'Cron fired: ARS daily check — 3 new leads found' },
+            { time: '25m ago', agent: 'arvis_admin', color: COLORS.arvis_admin.text, text: 'Permit status check complete — 2 pending approvals' },
+            { time: '28m ago', agent: 'iva', color: COLORS.iva.text, text: 'Reported task: Fix BlueBubbles tunnel → Blocked' },
+            { time: '35m ago', agent: 'ivan', color: COLORS.ivan.text, text: 'Heartbeat OK — monitoring channels' },
+        ];
+
+        /* ── Durable Execution Trace Data (New Feature) ── */
+        const executionPhases = [
+            {
+                id: 'plan', label: 'PLANNING', statusBadge: 'PLANNING', statusColor: '#8b5cf6',
+                activeTool: null, activeCore: [0, 1],
+                tools: [
+                    { name: 'BROWSER TOOL', status: 'idle' },
+                    { name: 'DOWNLOAD', status: 'idle' },
+                    { name: 'GET STRUCTURED DATA', status: 'idle' },
+                    { name: 'VALIDATE SCHEMA', status: 'idle' },
+                    { name: 'WRITE TO SHEET', status: 'idle' },
+                ],
+                logs: [
+                    { type: 'system', text: 'Initializing durable execution trace...' },
+                    { type: 'thought', text: 'Task received: "Scrape ARS lead data from AccuLynx portal"' },
+                    { type: 'thought', text: 'Decomposing: authenticate > navigate > extract > validate > store' },
+                    { type: 'decision', text: 'Strategy: Headless browser + retry logic (confidence: 94%)' },
+                    { type: 'system', text: 'Execution plan locked. Allocating tool chain...' },
+                ],
+            },
+            {
+                id: 'execute', label: 'EXECUTING', statusBadge: 'EXECUTING', statusColor: '#10b981',
+                activeTool: 'BROWSER TOOL', activeCore: [0, 1, 2, 3],
+                tools: [
+                    { name: 'BROWSER TOOL', status: 'active' },
+                    { name: 'DOWNLOAD', status: 'active' },
+                    { name: 'GET STRUCTURED DATA', status: 'active' },
+                    { name: 'VALIDATE SCHEMA', status: 'queued' },
+                    { name: 'WRITE TO SHEET', status: 'queued' },
+                ],
+                logs: [
+                    { type: 'system', text: 'Initializing [BROWSER TOOL] session...' },
+                    { type: 'code', text: 'await browser.goto("acculynx.com/api/v2/leads")' },
+                    { type: 'success', text: 'AUTH 200 OK — session token acquired' },
+                    { type: 'code', text: 'const leads = await page.evaluate(() => extractLeadTable())' },
+                    { type: 'success', text: 'Extracted 47 lead records from DOM table' },
+                    { type: 'system', text: '[DOWNLOAD] from SEC.gov complete — 3 filings' },
+                    { type: 'code', text: 'await validateSchema(leads, ARS_LEAD_SCHEMA)' },
+                ],
+            },
+            {
+                id: 'error', label: 'ERROR DETECTED', statusBadge: 'ERROR', statusColor: '#ef4444',
+                activeTool: 'VALIDATE SCHEMA', activeCore: [1, 2],
+                tools: [
+                    { name: 'BROWSER TOOL', status: 'done' },
+                    { name: 'DOWNLOAD', status: 'done' },
+                    { name: 'GET STRUCTURED DATA', status: 'done' },
+                    { name: 'VALIDATE SCHEMA', status: 'error' },
+                    { name: 'WRITE TO SHEET', status: 'blocked' },
+                ],
+                logs: [
+                    { type: 'error', text: 'SchemaValidationError: 3 records missing "phone" field (rows 12, 29, 41)' },
+                    { type: 'error', text: 'TypeError: Cannot read "status" of undefined at lead[29].pipeline.status' },
+                    { type: 'thought', text: 'Root cause: AccuLynx API returned partial records for archived leads' },
+                    { type: 'system', text: 'Execution halted. Entering self-correction loop...' },
+                ],
+            },
+            {
+                id: 'correct', label: 'SELF-CORRECTING', statusBadge: 'CORRECTING', statusColor: '#3b82f6',
+                activeTool: 'WRITE TO SHEET', activeCore: [0, 1, 2, 3],
+                tools: [
+                    { name: 'BROWSER TOOL', status: 'done' },
+                    { name: 'DOWNLOAD', status: 'done' },
+                    { name: 'GET STRUCTURED DATA', status: 'done' },
+                    { name: 'VALIDATE SCHEMA', status: 'retry' },
+                    { name: 'WRITE TO SHEET', status: 'active' },
+                ],
+                logs: [
+                    { type: 'decision', text: 'Correction: Filter archived leads > re-fetch active-only > patch' },
+                    { type: 'code', text: 'const active = leads.filter(l => l.pipeline?.status !== "archived")' },
+                    { type: 'success', text: 'Filtered to 44 active leads — all pass schema validation' },
+                    { type: 'code', text: 'await writeToGoogleSheet(SHEET_ID, activeLeads)' },
+                    { type: 'success', text: 'Google Sheet updated: 44 rows written to "ARS Leads" tab' },
+                    { type: 'decision', text: 'Task complete. 2 retries, 0 unresolved. Confidence: 99%' },
+                ],
+            },
+        ];
+
+        /* ── Components ── */
+
+        const Badge = ({ children, color = '#334155', textColor = '#94a3b8', small = false }) => (
+            <span className={`inline-flex items-center rounded-md font-bold ${small ? 'px-1.5 py-0.5 text-[8px]' : 'px-2 py-0.5 text-[9px]'}`}
+                style={{ backgroundColor: color, color: textColor }}>{children}</span>
+        );
+
+        const StatusDot = ({ status }) => {
+            const colors = { online: '#10b981', sleeping: '#eab308', offline: '#ef4444' };
+            return <span className="relative flex h-2.5 w-2.5">
+                {status === 'online' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60" style={{ backgroundColor: colors[status] }}></span>}
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ backgroundColor: colors[status] || '#475569' }}></span>
+            </span>;
+        };
+
+        /* ── Agent Card (V1 style) ── */
+        const AgentCard = ({ agent }) => {
+            const c = COLORS[agent.id];
+            const channelColors = { Telegram: { bg: 'rgba(6,182,212,0.15)', text: '#22d3ee' }, iMessage: { bg: 'rgba(16,185,129,0.15)', text: '#34d399' } };
+            return (
+                <div className="bg-[#0e0e16]/90 border rounded-2xl p-4 hover:border-opacity-60 transition-all relative overflow-hidden" style={{ borderColor: c.border + '40' }}>
+                    <div className="flex items-center gap-3 mb-3">
+                        <div className="relative">
+                            <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold" style={{ backgroundColor: c.bg, color: c.text, border: `2px solid ${c.border}` }}>
+                                {agent.name[0]}
+                            </div>
+                            <div className="absolute -bottom-0.5 -right-0.5"><StatusDot status={agent.status} /></div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-white text-sm">{agent.name}</h3>
+                                <Badge color={c.bg} textColor={c.text} small>{agent.model}</Badge>
+                            </div>
+                            <p className="text-[10px] text-slate-500 truncate">{agent.role}</p>
+                        </div>
+                    </div>
+                    <div className="space-y-2 text-[10px]">
+                        <div className="flex justify-between"><span className="text-slate-500">Host</span><span className="text-slate-300 flex items-center gap-1">&#x1F5A5; {agent.host}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Channels</span>
+                            <div className="flex gap-1">{agent.channels.map(ch => <Badge key={ch} color={channelColors[ch]?.bg || '#1e293b'} textColor={channelColors[ch]?.text || '#94a3b8'} small>{ch}</Badge>)}</div>
+                        </div>
+                        <div className="flex justify-between"><span className="text-slate-500">Sessions</span><span className="text-slate-300 font-mono">{agent.sessions}</span></div>
+                        <div className="flex justify-between"><span className="text-slate-500">Heartbeat</span><span className="text-slate-300 font-mono">{agent.heart}</span></div>
+                        <div className="flex justify-between items-center"><span className="text-slate-500">Context Window</span><span className="text-slate-400 font-mono text-[9px]">{agent.contextUsed} / {agent.contextMax}K</span></div>
+                        <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${(agent.contextUsed / agent.contextMax) * 100}%`, backgroundColor: c.border }}></div>
+                        </div>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-slate-800/50 text-[9px] text-slate-500 flex items-center gap-1">
+                        <span>&#x1F464;</span> {agent.assignedTo}
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Client Group — Wallet-Style Stacked Cards ── */
+        const ClientGroup = ({ group, allAgents }) => {
+            const [expandedAgent, setExpandedAgent] = useState(null);
+            const groupAgents = group.agentIds.map(id => (allAgents || agents).find(a => a.id === id)).filter(Boolean);
+            const onlineCount = groupAgents.filter(a => a.status === 'online').length;
+            const totalCount = groupAgents.length;
+            const channelColors = { Telegram: { bg: 'rgba(6,182,212,0.15)', text: '#22d3ee' }, iMessage: { bg: 'rgba(16,185,129,0.15)', text: '#34d399' } };
+
+            const toggleAgent = (agentId) => {
+                setExpandedAgent(prev => prev === agentId ? null : agentId);
+            };
+
+            // Calculate collapsed peek height per card
+            const peekHeight = 52;
+
+            return (
+                <div className="bg-[#0e0e16]/90 border rounded-2xl overflow-hidden transition-all" style={{ borderColor: group.color + '30' }}>
+                    {/* Client Header */}
+                    <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: `1px solid ${group.color}18` }}>
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: group.color + '18', border: `1px solid ${group.color}30` }}>
+                                <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: group.color, boxShadow: `0 0 8px ${group.color}60` }}></span>
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h3 className="text-xs font-bold text-white">{group.name}</h3>
+                                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-md" style={{ backgroundColor: group.color + '15', color: group.color, border: `1px solid ${group.color}25` }}>{group.subtitle}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[8px] text-slate-500">{totalCount} agent{totalCount !== 1 ? 's' : ''}</span>
+                                    <span className="flex items-center gap-1 text-[8px]">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                        <span className="text-emerald-400">{onlineCount}</span>
+                                    </span>
+                                    {totalCount - onlineCount > 0 && (
+                                        <span className="flex items-center gap-1 text-[8px]">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>
+                                            <span className="text-yellow-400">{totalCount - onlineCount}</span>
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex -space-x-1.5">
+                            {groupAgents.map(a => {
+                                const ac = COLORS[a.id];
+                                return (
+                                    <div key={a.id} className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold border-2"
+                                        style={{ backgroundColor: ac?.bg, color: ac?.text, borderColor: '#0e0e16' }}>
+                                        {a.name[0]}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Wallet Stack */}
+                    <div className="px-3 pb-3 pt-2 wallet-stack">
+                        {groupAgents.map((agent, idx) => {
+                            const c = COLORS[agent.id];
+                            const isExpanded = expandedAgent === agent.id;
+                            const expandedIdx = groupAgents.findIndex(a => a.id === expandedAgent);
+                            const isBeforeExpanded = expandedAgent && idx < expandedIdx;
+                            const isAfterExpanded = expandedAgent && idx > expandedIdx;
+
+                            // Compute vertical offset: stacked cards peek by peekHeight
+                            let topOffset;
+                            if (!expandedAgent) {
+                                topOffset = 0;
+                            } else if (isExpanded) {
+                                topOffset = 0;
+                            } else if (isBeforeExpanded) {
+                                topOffset = 0;
+                            } else {
+                                topOffset = 0;
+                            }
+
+                            return (
+                                <div key={agent.id}
+                                    className="wallet-card rounded-xl border relative"
+                                    onClick={() => toggleAgent(agent.id)}
+                                    style={{
+                                        borderColor: isExpanded ? c.border + '60' : c.border + '25',
+                                        backgroundColor: isExpanded ? '#0c0c18' : '#0b0b14',
+                                        marginTop: idx === 0 ? '0' : isExpanded ? '6px' : '-20px',
+                                        zIndex: isExpanded ? 50 : totalCount - idx,
+                                        boxShadow: isExpanded ? `0 4px 20px ${c.border}15, 0 0 0 1px ${c.border}20` : `0 1px 3px rgba(0,0,0,0.3)`,
+                                    }}>
+
+                                    {/* Collapsed Peek Bar — always visible */}
+                                    <div className="px-4 py-2.5 flex items-center gap-3">
+                                        <div className="relative">
+                                            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: c.bg, color: c.text, border: `2px solid ${c.border}` }}>
+                                                {agent.name[0]}
+                                            </div>
+                                            <div className="absolute -bottom-0.5 -right-0.5"><StatusDot status={agent.status} /></div>
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="font-bold text-white text-[12px]">{agent.name}</h4>
+                                                <Badge color={c.bg} textColor={c.text} small>{agent.model}</Badge>
+                                                <span className="text-[8px] text-slate-600 ml-auto font-mono hidden sm:inline">{agent.heart}</span>
+                                            </div>
+                                            <p className="text-[9px] text-slate-500 truncate">{agent.role}</p>
+                                        </div>
+                                        <span className="text-slate-600 text-[10px] transition-transform flex-shrink-0" style={{ transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)', display: 'inline-block' }}>
+                                            &#x25BC;
+                                        </span>
+                                    </div>
+
+                                    {/* Expanded Details */}
+                                    {isExpanded && (
+                                        <div className="px-4 pb-3.5 pt-0 border-t" style={{ borderColor: c.border + '15' }}>
+                                            <div className="space-y-2 text-[10px] mt-2.5">
+                                                <div className="flex justify-between"><span className="text-slate-500">Host</span><span className="text-slate-300 flex items-center gap-1">&#x1F5A5; {agent.host}</span></div>
+                                                <div className="flex justify-between"><span className="text-slate-500">Channels</span>
+                                                    <div className="flex gap-1">{agent.channels.map(ch => <Badge key={ch} color={channelColors[ch]?.bg || '#1e293b'} textColor={channelColors[ch]?.text || '#94a3b8'} small>{ch}</Badge>)}</div>
+                                                </div>
+                                                <div className="flex justify-between"><span className="text-slate-500">Sessions</span><span className="text-slate-300 font-mono">{agent.sessions}</span></div>
+                                                <div className="flex justify-between"><span className="text-slate-500">Heartbeat</span><span className="text-slate-300 font-mono">{agent.heart}</span></div>
+                                                <div className="flex justify-between"><span className="text-slate-500">Load</span><span className="text-slate-300 font-mono">{agent.load}%</span></div>
+                                                <div className="flex justify-between items-center"><span className="text-slate-500">Context Window</span><span className="text-slate-400 font-mono text-[9px]">{agent.contextUsed} / {agent.contextMax}K</span></div>
+                                                <div className="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full transition-all" style={{ width: `${(agent.contextUsed / agent.contextMax) * 100}%`, backgroundColor: c.border }}></div>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2.5 pt-2 border-t text-[9px] text-slate-500 flex items-center gap-1" style={{ borderColor: c.border + '12' }}>
+                                                <span>&#x1F464;</span> {agent.assignedTo}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Task Detail Modal ── */
+        const TaskDetailModal = ({ task, colId, columns, onClose, onUpdate }) => {
+            const [editStatus, setEditStatus] = useState(colId);
+            const [editPriority, setEditPriority] = useState(task.priority);
+            const [saving, setSaving] = useState(false);
+            const [saveMsg, setSaveMsg] = useState('');
+            const agentC = COLORS[task.agent];
+            const priorityColors = { high: { bg: 'rgba(239,68,68,0.15)', text: '#f87171' }, med: { bg: 'rgba(234,179,8,0.12)', text: '#facc15' }, low: { bg: '#1e293b', text: '#64748b' } };
+
+            const handleSave = async () => {
+                setSaving(true);
+                setSaveMsg('');
+                const updates = {};
+                if (editStatus !== colId) updates.status = editStatus;
+                if (editPriority !== task.priority) updates.priority = editPriority;
+                if (Object.keys(updates).length === 0) { setSaving(false); setSaveMsg('No changes'); return; }
+                try {
+                    const mcToken = localStorage.getItem('mc_auth_token') || '';
+                    const resp = await fetch(`${API_BASE}/api/tasks`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-MC-Token': mcToken },
+                        body: JSON.stringify({ taskId: task.id, ...updates }),
+                    });
+                    const data = await resp.json();
+                    if (data.ok) {
+                        setSaveMsg('✓ Synced to ClickUp');
+                        onUpdate && onUpdate(task.id, updates);
+                        setTimeout(onClose, 1200);
+                    } else {
+                        setSaveMsg('✗ ' + (data.error || 'Failed'));
+                    }
+                } catch (e) { setSaveMsg('✗ Network error'); }
+                setSaving(false);
+            };
+
+            const dateStr = task.dateUpdated ? new Date(parseInt(task.dateUpdated)).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Unknown';
+
+            return (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center" onClick={onClose}>
+                    <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+                    <div className="relative bg-[#0e0e16] border border-slate-700/60 rounded-2xl w-[520px] max-w-[90vw] max-h-[85vh] overflow-y-auto custom-scrollbar shadow-2xl shadow-black/50" onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="px-5 pt-5 pb-3 border-b border-slate-800/50">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-sm font-bold text-white leading-snug mb-2">{task.title}</h2>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <div className="flex items-center gap-1.5">
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ backgroundColor: agentC?.bg, color: agentC?.text, border: `1px solid ${agentC?.border}50` }}>
+                                                {agents.find(a => a.id === task.agent)?.name[0]}
+                                            </div>
+                                            <span className="text-[10px] font-medium" style={{ color: agentC?.text }}>{agents.find(a => a.id === task.agent)?.name}</span>
+                                        </div>
+                                        {task.tags && task.tags.map((t, i) => <Badge key={i} small>{t}</Badge>)}
+                                    </div>
+                                </div>
+                                <button onClick={onClose} className="text-slate-500 hover:text-white transition-all text-lg flex-shrink-0 mt-0.5">✕</button>
+                            </div>
+                        </div>
+
+                        {/* Body */}
+                        <div className="px-5 py-4 space-y-4">
+                            {/* Description */}
+                            <div>
+                                <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Description</label>
+                                <div className="text-[11px] text-slate-300 leading-relaxed bg-[#11111b]/80 rounded-lg p-3 border border-slate-800/40 min-h-[60px] whitespace-pre-wrap">
+                                    {task.fullDesc || task.desc || 'No description'}
+                                </div>
+                            </div>
+
+                            {/* Editable Fields */}
+                            <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Status</label>
+                                    <select value={editStatus} onChange={e => setEditStatus(e.target.value)}
+                                        className="w-full bg-[#11111b] border border-slate-700/50 rounded-lg px-3 py-2 text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer">
+                                        {columns.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 block">Priority</label>
+                                    <select value={editPriority} onChange={e => setEditPriority(e.target.value)}
+                                        className="w-full bg-[#11111b] border border-slate-700/50 rounded-lg px-3 py-2 text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/40 cursor-pointer">
+                                        <option value="high">🔴 High</option>
+                                        <option value="med">🟡 Medium</option>
+                                        <option value="low">⚪ Low</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Meta Info */}
+                            <div className="grid grid-cols-2 gap-3 text-[10px]">
+                                <div className="flex justify-between bg-[#11111b]/60 rounded-lg px-3 py-2 border border-slate-800/30">
+                                    <span className="text-slate-500">Last Updated</span>
+                                    <span className="text-slate-300 font-mono">{dateStr}</span>
+                                </div>
+                                <div className="flex justify-between bg-[#11111b]/60 rounded-lg px-3 py-2 border border-slate-800/30">
+                                    <span className="text-slate-500">Task ID</span>
+                                    <span className="text-slate-400 font-mono text-[9px]">{task.id}</span>
+                                </div>
+                            </div>
+
+                            {/* ClickUp Link */}
+                            {task.url && (
+                                <a href={task.url} target="_blank" rel="noopener noreferrer"
+                                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#11111b]/60 border border-slate-800/30 hover:border-indigo-500/30 transition-all text-[10px] text-indigo-400 hover:text-indigo-300">
+                                    <span>🔗</span> Open in ClickUp <span className="ml-auto text-slate-600">↗</span>
+                                </a>
+                            )}
+                        </div>
+
+                        {/* Footer — Save */}
+                        <div className="px-5 py-3 border-t border-slate-800/50 flex items-center justify-between">
+                            <span className="text-[10px] font-mono" style={{ color: saveMsg.startsWith('✓') ? '#34d399' : saveMsg.startsWith('✗') ? '#f87171' : '#64748b' }}>
+                                {saveMsg}
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={onClose} className="px-4 py-2 rounded-lg text-[10px] font-bold text-slate-400 hover:text-white bg-slate-800/40 border border-slate-700/30 transition-all">
+                                    Cancel
+                                </button>
+                                <button onClick={handleSave} disabled={saving}
+                                    className="px-4 py-2 rounded-lg text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-500 transition-all disabled:opacity-50 flex items-center gap-1.5">
+                                    {saving ? '⏳ Saving...' : '💾 Save & Sync'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Task Card ── */
+        const TaskCard = ({ task, colColor, colId, columns, onDragStart, isDragging, onOpenDetail }) => {
+            const agentC = COLORS[task.agent];
+            const priorityColors = { high: { bg: 'rgba(239,68,68,0.15)', text: '#f87171' }, med: { bg: 'rgba(234,179,8,0.12)', text: '#facc15' }, low: { bg: '#1e293b', text: '#64748b' } };
+            const p = priorityColors[task.priority] || priorityColors.low;
+            return (
+                <div
+                    draggable
+                    onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ taskId: task.id, sourceColId: colId }));
+                        e.dataTransfer.effectAllowed = 'move';
+                        onDragStart && onDragStart(task.id);
+                    }}
+                    onDragEnd={() => onDragStart && onDragStart(null)}
+                    onClick={() => onOpenDetail && onOpenDetail(task, colId)}
+                    className="bg-[#11111b]/90 border border-slate-800/60 rounded-xl p-3.5 hover:border-slate-700 transition-all group cursor-grab active:cursor-grabbing"
+                    style={{ opacity: isDragging ? 0.4 : 1 }}>
+                    <h4 className="text-[11px] font-bold text-white mb-1.5 leading-snug">{task.title}</h4>
+                    <p className="text-[9px] text-slate-500 leading-relaxed mb-3">{task.desc}</p>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                            <div className="w-4 h-4 rounded-full flex items-center justify-center text-[7px] font-bold" style={{ backgroundColor: agentC?.bg, color: agentC?.text, border: `1px solid ${agentC?.border}50` }}>
+                                {agents.find(a => a.id === task.agent)?.name[0]}
+                            </div>
+                            <span className="text-[9px] font-medium" style={{ color: agentC?.text }}>{agents.find(a => a.id === task.agent)?.name}</span>
+                        </div>
+                        <div className="flex gap-1">
+                            <Badge color={p.bg} textColor={p.text} small>{task.priority.toUpperCase()}</Badge>
+                            {task.tags.map((t, i) => <Badge key={i} small>{t}</Badge>)}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Canvas Artifact Data (for Cowork panel) ── */
+        const canvasArtifacts = {
+            'lead-report': {
+                type: 'document',
+                title: 'ARS Weekly Lead Report',
+                icon: '\ud83d\udcc4',
+                content: `# ARS Weekly Lead Report\n**Generated:** ${new Date().toLocaleDateString()}\n**Agent:** T.I.A.\n\n## Summary\n- **New Leads:** 23\n- **Qualified:** 14\n- **Contacted:** 9\n- **Converted:** 3\n\n## Top Leads\n| Name | Score | Status |\n|------|-------|--------|\n| Johnson Residence | 92 | Hot |\n| Smith Commercial | 87 | Warm |\n| Davis Property | 81 | Warm |\n| Miller Estate | 76 | New |\n\n## Pipeline Value\nEstimated pipeline: **$142,500**\nProjected close rate: **21%**\nExpected revenue: **$29,925**\n\n## Action Items\n1. Follow up with Johnson Residence (priority)\n2. Schedule inspection for Smith Commercial\n3. Send proposal to Davis Property`,
+            },
+            'cost-analysis': {
+                type: 'spreadsheet',
+                title: 'Swarm Cost Optimization',
+                icon: '\ud83d\udcca',
+                content: `# Swarm Cost Optimization Analysis\n**Period:** Last 30 Days\n\n## Token Usage by Agent\n| Agent | Tokens | Cost | Avg/Day |\n|-------|--------|------|---------|\n| Iva | 2.4M | $36.00 | 80K |\n| IVAN | 890K | $13.35 | 29.6K |\n| T.I.A. | 1.1M | $16.50 | 36.6K |\n| JOY | 420K | $6.30 | 14K |\n\n## Total: $72.15/month\n\n## Optimization Recommendations\n1. **Cache frequent queries** - Save ~18% on Iva\n2. **Batch IVAN syncs** - Reduce API calls by 40%\n3. **T.I.A. prompt compression** - Save ~12%\n\n## Projected Savings: $19.40/month`,
+            },
+            'deploy-config': {
+                type: 'code',
+                title: 'Cloudflare Deploy Config',
+                icon: '\u2699\ufe0f',
+                content: `// wrangler.toml - Mission Control Deploy\nname = "openclaw-mission-control"\nmain = "src/index.ts"\ncompatibility_date = "2024-12-01"\n\n[site]\nbucket = "./dist"\n\n[env.production]\nroute = "mission.openclaw.ai/*"\nzone_id = "abc123..."\n\n[env.staging]\nroute = "staging.mission.openclaw.ai/*"\n\n[[kv_namespaces]]\nbinding = "SWARM_STATE"\nid = "kv-swarm-state-prod"\n\n[[d1_databases]]\nbinding = "METRICS_DB"\ndatabase_id = "d1-metrics-prod"\ndatabase_name = "swarm_metrics"`,
+            },
+            'inspection-checklist': {
+                type: 'document',
+                title: 'Roof Inspection Checklist',
+                icon: '\ud83d\udcdd',
+                content: `# Roof Inspection Follow-Up Checklist\n**Agent:** T.I.A. | **Updated:** ${new Date().toLocaleDateString()}\n\n## Pending Inspections\n- [ ] **Johnson Residence** - 742 Oak Ave\n  - Scheduled: Tomorrow 9:00 AM\n  - Notes: Storm damage reported, insurance claim\n- [ ] **Smith Commercial** - 1200 Industrial Blvd\n  - Scheduled: Wednesday 2:00 PM\n  - Notes: Flat roof, possible membrane failure\n- [ ] **Davis Property** - 89 Maple Dr\n  - Scheduled: Thursday 10:00 AM\n  - Notes: Aging shingles, full replacement quote\n\n## Completed This Week\n- [x] Wilson Home - Passed inspection\n- [x] Brown Office - Repair estimate sent\n- [x] Garcia Duplex - Warranty claim filed`,
+            },
+            'workflow-diagram': {
+                type: 'design',
+                title: 'GHL Automation Flow',
+                icon: '\ud83c\udfa8',
+                content: `# GoHighLevel Automation Workflow\n\n## Lead Capture Flow\n\`\`\`\n[Website Form] --> [GHL Pipeline]\n       |                |\n       v                v\n  [Webhook]      [Auto-Tag]\n       |                |\n       v                v\n  [T.I.A.]       [SMS Drip]\n       |                |\n       v                v\n  [Qualify]      [Email Seq]\n       |                |\n       v                v\n  [AccuLynx]    [Follow-Up]\n       |                |\n       +----> [Book Inspection]\n\`\`\`\n\n## Trigger Rules\n- New form submit -> Instant webhook\n- No response 24h -> SMS reminder\n- No response 72h -> Email + call task\n- Inspection booked -> AccuLynx sync`,
+            },
+        };
+
+        /* ── Simulated Agent Responses ── */
+        const agentResponses = {
+            iva: [
+                { text: "I've pulled up the latest data. Let me analyze this for you.", hasArtifact: false },
+                { text: "Here's the cost analysis I put together. The spreadsheet shows token usage across all agents with optimization recommendations.", hasArtifact: true, artifactId: 'cost-analysis' },
+                { text: "I've checked the deployment config. Everything looks good for the Cloudflare Pages push. Here's the current wrangler config:", hasArtifact: true, artifactId: 'deploy-config' },
+                { text: "Running a quick diagnostic on the swarm... All 8 agents reporting. 6 online, 2 sleeping.", hasArtifact: false },
+                { text: "Done! I've updated the ClickUp backlog. 3 tasks moved to In Progress, 1 marked as blocked pending the BlueBubbles fix.", hasArtifact: false },
+            ],
+            ivan: [
+                { text: "Syncing with ClickUp now... Found 12 new updates across 3 workspaces.", hasArtifact: false },
+                { text: "Doc routing documentation is ready. I've organized it into the standard onboarding format.", hasArtifact: true, artifactId: 'deploy-config' },
+                { text: "Channel monitoring active. No critical alerts in the last 6 hours. Content calendar looks good for next week.", hasArtifact: false },
+            ],
+            arvis_sales: [
+                { text: "I've compiled this week's ARS lead report. 23 new leads came in, 14 qualified. Here's the full breakdown:", hasArtifact: true, artifactId: 'lead-report' },
+                { text: "AccuLynx sync complete. 3 new leads added to the pipeline. Total pipeline value: $142,500.", hasArtifact: false },
+                { text: "GHL automation workflow is mapped out. Here's the visual flow I designed for the lead capture pipeline:", hasArtifact: true, artifactId: 'workflow-diagram' },
+                { text: "Follow-up drip sequences are running. 8 contacts in the 72-hour nurture sequence, 3 approaching close.", hasArtifact: false },
+            ],
+            arvis_recruit: [
+                { text: "Indeed scrape complete. Found 4 new applicants matching roofing crew criteria. 2 have 5+ years experience.", hasArtifact: false },
+                { text: "Sent follow-up messages to 3 applicants who passed initial screening. Interviews pending for next week.", hasArtifact: false },
+                { text: "Recruiting pipeline: 12 total applicants, 6 screened, 3 interviewing, 1 offer pending.", hasArtifact: false },
+            ],
+            arvis_admin: [
+                { text: "Permit status check complete. 2 pending approvals for Johnson and Smith properties. Davis permit approved today.", hasArtifact: false },
+                { text: "Weekly expense report synced. Total field expenses: $4,230. Fuel costs up 8% from last week.", hasArtifact: false },
+                { text: "The roof inspection follow-ups are organized. I've created a checklist for the 3 pending inspections this week:", hasArtifact: true, artifactId: 'inspection-checklist' },
+            ],
+            arvis_prod: [
+                { text: "Crew schedule for this week: Team Alpha on Johnson (Mon-Wed), Team Bravo on Smith (Thu-Fri). Materials pre-staged.", hasArtifact: false },
+                { text: "Material order check complete. Shingle inventory at 340 bundles. Need to reorder underlayment by Friday.", hasArtifact: false },
+            ],
+            tia: [
+                { text: "Hey Trenton! I've pulled the latest from the ARS dashboard. Everything is on track for this week's inspections.", hasArtifact: false },
+                { text: "The roof inspection follow-ups are organized. I've created a checklist for the 3 pending inspections this week:", hasArtifact: true, artifactId: 'inspection-checklist' },
+                { text: "GHL automation workflow is mapped out. Here's the visual flow I designed for the lead capture pipeline:", hasArtifact: true, artifactId: 'workflow-diagram' },
+                { text: "AccuLynx sync complete. 3 new leads added to the pipeline. Total pipeline value: $142,500.", hasArtifact: false },
+            ],
+            joy: [
+                { text: "Good morning! I've sent Gina her daily schedule. She has 2 appointments today.", hasArtifact: false },
+                { text: "Grocery list is ready and sent via iMessage. I found some great deals at Trader Joe's this week.", hasArtifact: false },
+                { text: "Appointment reminders sent for tomorrow. Gina confirmed the 10 AM slot.", hasArtifact: false },
+            ],
+        };
+
+        /* ── Pre-seeded Thread Data ── */
+        const defaultThreads = [
+            {
+                id: 'thread-1', title: 'ARS Lead Scraping Task', agent: 'tia', pinned: true,
+                createdAt: new Date(Date.now() - 3600000 * 4), updatedAt: new Date(Date.now() - 60000 * 12),
+                preview: 'AccuLynx sync complete. 3 new leads added...',
+                messages: [
+                    { id: 't1-1', role: 'system', text: 'Thread started with T.I.A.', time: new Date(Date.now() - 3600000 * 4) },
+                    { id: 't1-2', role: 'user', agent: 'tia', text: 'Run the ARS lead scraping task and pull latest data from AccuLynx', time: new Date(Date.now() - 3600000 * 4 + 5000) },
+                    { id: 't1-3', role: 'agent', agent: 'tia', text: "I've compiled this week's ARS lead report. 23 new leads came in, 14 qualified. Here's the full breakdown:", time: new Date(Date.now() - 3600000 * 4 + 18000), hasArtifact: true, artifactId: 'lead-report' },
+                    { id: 't1-4', role: 'user', agent: 'tia', text: 'Great. Now organize the pending inspection follow-ups', time: new Date(Date.now() - 3600000 * 2) },
+                    { id: 't1-5', role: 'agent', agent: 'tia', text: "The roof inspection follow-ups are organized. I've created a checklist for the 3 pending inspections this week:", time: new Date(Date.now() - 3600000 * 2 + 12000), hasArtifact: true, artifactId: 'inspection-checklist' },
+                ],
+            },
+            {
+                id: 'thread-2', title: 'Swarm Cost Analysis', agent: 'iva', pinned: false,
+                createdAt: new Date(Date.now() - 3600000 * 8), updatedAt: new Date(Date.now() - 3600000 * 2),
+                preview: "Here's the cost analysis I put together...",
+                messages: [
+                    { id: 't2-1', role: 'system', text: 'Thread started with Iva.', time: new Date(Date.now() - 3600000 * 8) },
+                    { id: 't2-2', role: 'user', agent: 'iva', text: 'Analyze token usage across all bots and find ways to reduce costs', time: new Date(Date.now() - 3600000 * 8 + 3000) },
+                    { id: 't2-3', role: 'agent', agent: 'iva', text: "Here's the cost analysis I put together. The spreadsheet shows token usage across all agents with optimization recommendations.", time: new Date(Date.now() - 3600000 * 8 + 20000), hasArtifact: true, artifactId: 'cost-analysis' },
+                ],
+            },
+            {
+                id: 'thread-3', title: 'Deploy Mission Control', agent: 'ivan', pinned: false,
+                createdAt: new Date(Date.now() - 86400000), updatedAt: new Date(Date.now() - 3600000 * 6),
+                preview: "I've checked the deployment config...",
+                messages: [
+                    { id: 't3-1', role: 'system', text: 'Thread started with IVAN.', time: new Date(Date.now() - 86400000) },
+                    { id: 't3-2', role: 'user', agent: 'ivan', text: 'Deploy the mission control dashboard to Cloudflare Pages', time: new Date(Date.now() - 86400000 + 4000) },
+                    { id: 't3-3', role: 'agent', agent: 'ivan', text: "Doc routing documentation is ready. I've organized it into the standard onboarding format.", time: new Date(Date.now() - 86400000 + 15000), hasArtifact: true, artifactId: 'deploy-config' },
+                ],
+            },
+            {
+                id: 'thread-4', title: 'GHL Workflow Setup', agent: 'tia', pinned: false,
+                createdAt: new Date(Date.now() - 86400000 * 2), updatedAt: new Date(Date.now() - 86400000),
+                preview: 'GHL automation workflow is mapped out...',
+                messages: [
+                    { id: 't4-1', role: 'system', text: 'Thread started with T.I.A.', time: new Date(Date.now() - 86400000 * 2) },
+                    { id: 't4-2', role: 'user', agent: 'tia', text: 'Map out the GoHighLevel automation workflow for lead capture', time: new Date(Date.now() - 86400000 * 2 + 6000) },
+                    { id: 't4-3', role: 'agent', agent: 'tia', text: "GHL automation workflow is mapped out. Here's the visual flow I designed for the lead capture pipeline:", time: new Date(Date.now() - 86400000 * 2 + 22000), hasArtifact: true, artifactId: 'workflow-diagram' },
+                ],
+            },
+            {
+                id: 'thread-5', title: "Gina's Weekly Groceries", agent: 'joy', pinned: false,
+                createdAt: new Date(Date.now() - 86400000 * 3), updatedAt: new Date(Date.now() - 86400000 * 2),
+                preview: 'Grocery list is ready and sent via iMessage...',
+                messages: [
+                    { id: 't5-1', role: 'system', text: 'Thread started with JOY.', time: new Date(Date.now() - 86400000 * 3) },
+                    { id: 't5-2', role: 'user', agent: 'joy', text: "Help Gina with her weekly grocery list and meal plan", time: new Date(Date.now() - 86400000 * 3 + 2000) },
+                    { id: 't5-3', role: 'agent', agent: 'joy', text: "Grocery list is ready and sent via iMessage. I found some great deals at Trader Joe's this week.", time: new Date(Date.now() - 86400000 * 3 + 10000) },
+                ],
+            },
+        ];
+
+        /* ── Command Center Component (Real API + Canvas + Thread Sidebar) ── */
+        const CommandCenter = () => {
+            const [threads, setThreads] = useState([]);
+            const [activeThreadId, setActiveThreadId] = useState(null);
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [selectedAgent, setSelectedAgent] = useState('iva');
+            const [inputValue, setInputValue] = useState('');
+            const [isTyping, setIsTyping] = useState(false);
+            const [canvasOpen, setCanvasOpen] = useState(false);
+            const [activeArtifact, setActiveArtifact] = useState(null);
+            const [canvasHistory, setCanvasHistory] = useState([]);
+            const [loadingThreads, setLoadingThreads] = useState(true);
+            const [loadingMessages, setLoadingMessages] = useState(false);
+            const [activeMessages, setActiveMessages] = useState([]);
+            const pollRef = useRef(null);
+            const chatRef = useRef(null);
+            const inputRef = useRef(null);
+
+            const mcToken = localStorage.getItem('mc_auth_token') || '';
+
+            // Helper: API call with auth
+            const chatAPI = useCallback(async (method, params = {}, body = null) => {
+                const url = new URL(`${API_BASE}/api/chat`);
+                url.searchParams.set('token', mcToken);
+                for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+                const opts = { method, headers: { 'Content-Type': 'application/json', 'X-MC-Token': mcToken } };
+                if (body) opts.body = JSON.stringify(body);
+                const r = await fetch(url.toString(), opts);
+                return r.json();
+            }, [mcToken]);
+
+            // Load threads on mount
+            useEffect(() => {
+                (async () => {
+                    setLoadingThreads(true);
+                    const data = await chatAPI('GET');
+                    if (data?.threads) {
+                        const mapped = data.threads.map(t => ({
+                            id: t.id, title: t.title, agent: t.agent_id, pinned: false,
+                            createdAt: new Date(t.created_at), updatedAt: new Date(t.updated_at),
+                            preview: t.title,
+                        }));
+                        setThreads(mapped);
+                        if (mapped.length > 0 && !activeThreadId) setActiveThreadId(mapped[0].id);
+                    }
+                    setLoadingThreads(false);
+                })();
+            }, []);
+
+            // Load messages when active thread changes
+            useEffect(() => {
+                if (!activeThreadId) { setActiveMessages([]); return; }
+                (async () => {
+                    setLoadingMessages(true);
+                    const data = await chatAPI('GET', { threadId: activeThreadId });
+                    if (data?.messages) {
+                        const mapped = data.messages.map(m => ({
+                            id: m.id, role: m.role, agent: m.agent_id, text: m.content,
+                            time: new Date(m.created_at), status: m.status,
+                        }));
+                        setActiveMessages(mapped);
+                        // Set agent from thread
+                        if (data.thread?.agent_id) setSelectedAgent(data.thread.agent_id);
+                    }
+                    setLoadingMessages(false);
+                })();
+            }, [activeThreadId]);
+
+            // Poll for pending messages
+            useEffect(() => {
+                if (pollRef.current) clearInterval(pollRef.current);
+                const hasPending = activeMessages.some(m => m.status === 'pending' || m.status === 'processing');
+                if (!hasPending || !activeThreadId) return;
+                setIsTyping(true);
+                pollRef.current = setInterval(async () => {
+                    const data = await chatAPI('GET', { threadId: activeThreadId });
+                    if (data?.messages) {
+                        const mapped = data.messages.map(m => ({
+                            id: m.id, role: m.role, agent: m.agent_id, text: m.content,
+                            time: new Date(m.created_at), status: m.status,
+                        }));
+                        setActiveMessages(mapped);
+                        const stillPending = mapped.some(m => m.status === 'pending' || m.status === 'processing');
+                        if (!stillPending) { setIsTyping(false); clearInterval(pollRef.current); }
+                    }
+                }, 3000);
+                return () => clearInterval(pollRef.current);
+            }, [activeMessages.length, activeThreadId]);
+
+            const activeThread = threads.find(t => t.id === activeThreadId);
+            const messages = activeMessages.filter(m => m.text || m.role === 'system' || m.status === 'pending');
+
+            useEffect(() => {
+                if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+            }, [messages, isTyping, activeThreadId]);
+
+            const agentColor = COLORS[selectedAgent];
+            const agentName = agents.find(a => a.id === selectedAgent)?.name;
+
+            const openArtifact = (artifactId) => {
+                const artifact = canvasArtifacts[artifactId];
+                if (artifact) {
+                    setActiveArtifact({ id: artifactId, ...artifact });
+                    setCanvasOpen(true);
+                    if (!canvasHistory.find(h => h.id === artifactId)) {
+                        setCanvasHistory(prev => [...prev, { id: artifactId, ...artifact }]);
+                    }
+                }
+            };
+
+            const createNewThread = () => {
+                // New thread is created server-side on first message send (no threadId)
+                const tempId = 'new-' + Date.now();
+                const newThread = {
+                    id: tempId, title: `New Chat with ${agentName}`, agent: selectedAgent,
+                    pinned: false, createdAt: new Date(), updatedAt: new Date(), preview: 'New conversation',
+                    isNew: true,
+                };
+                setThreads(prev => [newThread, ...prev]);
+                setActiveThreadId(tempId);
+                setActiveMessages([]);
+                setCanvasOpen(false);
+                setCanvasHistory([]);
+                setActiveArtifact(null);
+                inputRef.current?.focus();
+            };
+
+            const deleteThread = (threadId, e) => {
+                e.stopPropagation();
+                setThreads(prev => prev.filter(t => t.id !== threadId));
+                if (activeThreadId === threadId) {
+                    const remaining = threads.filter(t => t.id !== threadId);
+                    if (remaining.length > 0) setActiveThreadId(remaining[0].id);
+                    else setActiveThreadId(null);
+                }
+            };
+
+            const togglePin = (threadId, e) => {
+                e.stopPropagation();
+                setThreads(prev => prev.map(t => t.id === threadId ? { ...t, pinned: !t.pinned } : t));
+            };
+
+            const sendMessage = async () => {
+                if (!inputValue.trim()) return;
+                const content = inputValue.trim();
+                setInputValue('');
+                setIsTyping(true);
+
+                // Optimistically add user message to UI
+                const tempUserMsg = { id: 'tmp-' + Date.now(), role: 'user', agent: selectedAgent, text: content, time: new Date(), status: 'delivered' };
+                setActiveMessages(prev => [...prev, tempUserMsg]);
+
+                // Determine if we need a new thread or existing
+                const isNewThread = activeThread?.isNew;
+                const body = { agentId: selectedAgent, content };
+                if (!isNewThread && activeThreadId) body.threadId = activeThreadId;
+
+                try {
+                    const data = await chatAPI('POST', {}, body);
+                    if (data?.ok && data.threadId) {
+                        // If new thread was created server-side, update our local state
+                        if (isNewThread) {
+                            const title = content.slice(0, 50) + (content.length > 50 ? '...' : '');
+                            setThreads(prev => prev.map(t => t.id === activeThreadId
+                                ? { ...t, id: data.threadId, title, isNew: false, updatedAt: new Date(), preview: title }
+                                : t
+                            ));
+                            setActiveThreadId(data.threadId);
+                        } else {
+                            // Update thread preview
+                            setThreads(prev => prev.map(t => t.id === activeThreadId
+                                ? { ...t, updatedAt: new Date(), preview: content.slice(0, 50) + '...' }
+                                : t
+                            ));
+                        }
+
+                        // Add pending agent message to trigger polling
+                        const pendingMsg = { id: data.pendingMessageId, role: 'agent', agent: selectedAgent, text: '', time: new Date(), status: 'pending' };
+                        setActiveMessages(prev => [...prev, pendingMsg]);
+                    }
+                } catch (e) {
+                    console.error('Send failed:', e);
+                    setIsTyping(false);
+                }
+            };
+
+            const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+            const formatTime = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            const formatDate = (d) => {
+                const now = new Date();
+                const diff = now - d;
+                if (diff < 60000) return 'Just now';
+                if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+                if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+                if (diff < 86400000 * 2) return 'Yesterday';
+                return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            };
+
+            const renderMarkdown = (text) => {
+                return text.split('\n').map((line, i) => {
+                    if (line.startsWith('# ')) return <div key={i} className="text-base font-bold text-white mb-2 mt-3">{line.slice(2)}</div>;
+                    if (line.startsWith('## ')) return <div key={i} className="text-sm font-bold text-slate-200 mb-1.5 mt-3">{line.slice(3)}</div>;
+                    if (line.startsWith('**') && line.endsWith('**')) return <div key={i} className="text-xs font-bold text-slate-300">{line.replace(/\*\*/g, '')}</div>;
+                    if (line.startsWith('| ')) {
+                        const cells = line.split('|').filter(c => c.trim()).map(c => c.trim());
+                        if (cells.every(c => c.match(/^[-]+$/))) return <div key={i} className="border-b border-slate-700/50 my-0.5"></div>;
+                        return (<div key={i} className="flex gap-4 text-[10px] font-mono py-0.5">{cells.map((cell, j) => <span key={j} className={`flex-1 ${j === 0 ? 'text-slate-300 font-bold' : 'text-slate-400'}`}>{cell}</span>)}</div>);
+                    }
+                    if (line.startsWith('- [x]')) return <div key={i} className="flex items-center gap-2 text-[11px] text-emerald-400/70 pl-2 py-0.5"><span className="text-emerald-500">&#x2713;</span><span className="line-through">{line.slice(5)}</span></div>;
+                    if (line.startsWith('- [ ]')) return <div key={i} className="flex items-center gap-2 text-[11px] text-slate-300 pl-2 py-0.5"><span className="w-3 h-3 border border-slate-600 rounded"></span>{line.slice(5)}</div>;
+                    if (line.startsWith('- ')) return <div key={i} className="text-[11px] text-slate-400 pl-3 py-0.5">{'\u2022'} {line.slice(2)}</div>;
+                    if (line.match(/^\d+\./)) return <div key={i} className="text-[11px] text-slate-400 pl-3 py-0.5">{line}</div>;
+                    if (line.startsWith('```')) return <div key={i} className="text-[9px] text-slate-600 font-mono">{line.replace(/```/g, '')}</div>;
+                    if (line.trim() === '') return <div key={i} className="h-1"></div>;
+                    return <div key={i} className="text-[11px] text-slate-400 leading-relaxed">{line.replace(/\*\*(.*?)\*\*/g, '$1')}</div>;
+                });
+            };
+
+            const filteredThreads = threads.filter(t => !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase()) || (t.preview && t.preview.toLowerCase().includes(searchQuery.toLowerCase())));
+            const pinnedThreads = filteredThreads.filter(t => t.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+            const recentThreads = filteredThreads.filter(t => !t.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+
+            return (
+                <section className="bg-[#0e0e16]/90 border border-slate-800 rounded-2xl overflow-hidden">
+                    {/* Header */}
+                    <div className="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)}
+                                className="p-1 rounded-md hover:bg-slate-800/60 transition-all text-slate-400 hover:text-white text-xs" title="Toggle threads">
+                                {sidebarOpen ? '\u2630' : '\u2630'}
+                            </button>
+                            <span>&#x1F4E1;</span>
+                            <h3 className="text-xs font-bold text-white">Command Center</h3>
+                            <span className="flex items-center gap-1 text-[8px] font-bold text-emerald-400 ml-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>LIVE
+                            </span>
+                            {activeThread && (
+                                <span className="text-[9px] text-slate-500 ml-2 font-mono hidden sm:inline">
+                                    / {activeThread.title.length > 30 ? activeThread.title.slice(0, 30) + '...' : activeThread.title}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {canvasHistory.length > 0 && (
+                                <button onClick={() => setCanvasOpen(!canvasOpen)}
+                                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[9px] font-bold transition-all"
+                                    style={{ backgroundColor: canvasOpen ? 'rgba(139,92,246,0.15)' : 'rgba(51,65,85,0.3)', color: canvasOpen ? '#a78bfa' : '#94a3b8', border: `1px solid ${canvasOpen ? 'rgba(139,92,246,0.3)' : 'rgba(51,65,85,0.4)'}` }}>
+                                    {canvasOpen ? '\u2B1C' : '\u2B1B'} Canvas {canvasHistory.length > 0 && `(${canvasHistory.length})`}
+                                </button>
+                            )}
+                            <div className="flex items-center gap-1 bg-slate-800/60 rounded-lg px-2 py-1 border border-slate-700/40">
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: agentColor?.border }}></span>
+                                <select value={selectedAgent} onChange={e => setSelectedAgent(e.target.value)}
+                                    className="bg-transparent text-[10px] text-slate-300 focus:outline-none font-bold cursor-pointer">
+                                    {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Main Layout: Thread Sidebar + Chat + Canvas */}
+                    <div className="flex" style={{ height: '480px' }}>
+
+                        {/* ── THREAD SIDEBAR ── */}
+                        {sidebarOpen && (
+                            <div className="w-[220px] flex-shrink-0 flex flex-col border-r border-slate-800/50" style={{ backgroundColor: 'rgba(8,9,16,0.7)' }}>
+                                {/* New Thread + Search */}
+                                <div className="p-2.5 space-y-2 border-b border-slate-800/30">
+                                    <button onClick={createNewThread}
+                                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-bold transition-all hover:opacity-90"
+                                        style={{ backgroundColor: 'rgba(99,102,241,0.15)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.25)' }}>
+                                        + New Thread
+                                    </button>
+                                    <div className="relative">
+                                        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                                            placeholder="Search threads..."
+                                            className="w-full bg-slate-900/50 border border-slate-800/50 rounded-lg px-3 py-1.5 text-[9px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/30 placeholder-slate-600" />
+                                        {searchQuery && (
+                                            <button onClick={() => setSearchQuery('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-slate-500 hover:text-white">&#x2715;</button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Thread List */}
+                                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                                    {/* Pinned */}
+                                    {pinnedThreads.length > 0 && (
+                                        <div className="px-2.5 pt-2.5 pb-1">
+                                            <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest px-1">&#x1F4CC; Pinned</span>
+                                            <div className="mt-1.5 space-y-0.5">
+                                                {pinnedThreads.map(t => {
+                                                    const tc = COLORS[t.agent];
+                                                    const isActive = t.id === activeThreadId;
+                                                    return (
+                                                        <button key={t.id} onClick={() => setActiveThreadId(t.id)}
+                                                            className="w-full text-left px-2.5 py-2 rounded-lg transition-all group relative"
+                                                            style={{ backgroundColor: isActive ? 'rgba(99,102,241,0.1)' : 'transparent', border: isActive ? '1px solid rgba(99,102,241,0.15)' : '1px solid transparent' }}>
+                                                            <div className="flex items-center gap-2 mb-0.5">
+                                                                <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tc?.border }}></span>
+                                                                <span className={`text-[10px] font-bold truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>{t.title.length > 22 ? t.title.slice(0, 22) + '...' : t.title}</span>
+                                                            </div>
+                                                            <p className="text-[8px] text-slate-600 truncate pl-3.5">{t.preview}</p>
+                                                            <span className="text-[7px] text-slate-700 pl-3.5 font-mono">{formatDate(t.updatedAt)}</span>
+                                                            {/* Hover actions */}
+                                                            <div className="absolute right-1 top-1 hidden group-hover:flex items-center gap-0.5">
+                                                                <button onClick={(e) => togglePin(t.id, e)} className="p-0.5 rounded text-[8px] text-yellow-500 hover:bg-slate-800/60" title="Unpin">&#x1F4CC;</button>
+                                                                <button onClick={(e) => deleteThread(t.id, e)} className="p-0.5 rounded text-[8px] text-slate-600 hover:text-red-400 hover:bg-slate-800/60" title="Delete">&#x2715;</button>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Recent */}
+                                    <div className="px-2.5 pt-2.5 pb-2">
+                                        <span className="text-[7px] font-bold text-slate-600 uppercase tracking-widest px-1">&#x1F552; Recent</span>
+                                        <div className="mt-1.5 space-y-0.5">
+                                            {recentThreads.map(t => {
+                                                const tc = COLORS[t.agent];
+                                                const isActive = t.id === activeThreadId;
+                                                const msgCount = t.id === activeThreadId ? activeMessages.filter(m => m.role !== 'system').length : 0;
+                                                return (
+                                                    <button key={t.id} onClick={() => setActiveThreadId(t.id)}
+                                                        className="w-full text-left px-2.5 py-2 rounded-lg transition-all group relative"
+                                                        style={{ backgroundColor: isActive ? 'rgba(99,102,241,0.1)' : 'transparent', border: isActive ? '1px solid rgba(99,102,241,0.15)' : '1px solid transparent' }}>
+                                                        <div className="flex items-center gap-2 mb-0.5">
+                                                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tc?.border }}></span>
+                                                            <span className={`text-[10px] font-bold truncate ${isActive ? 'text-white' : 'text-slate-300'}`}>{t.title.length > 22 ? t.title.slice(0, 22) + '...' : t.title}</span>
+                                                        </div>
+                                                        <p className="text-[8px] text-slate-600 truncate pl-3.5">{t.preview}</p>
+                                                        <div className="flex items-center gap-2 pl-3.5 mt-0.5">
+                                                            <span className="text-[7px] text-slate-700 font-mono">{formatDate(t.updatedAt)}</span>
+                                                            <span className="text-[7px] text-slate-700">&middot; {msgCount} msg{msgCount !== 1 ? 's' : ''}</span>
+                                                        </div>
+                                                        {/* Hover actions */}
+                                                        <div className="absolute right-1 top-1 hidden group-hover:flex items-center gap-0.5">
+                                                            <button onClick={(e) => togglePin(t.id, e)} className="p-0.5 rounded text-[8px] text-slate-600 hover:text-yellow-500 hover:bg-slate-800/60" title="Pin">&#x1F4CC;</button>
+                                                            <button onClick={(e) => deleteThread(t.id, e)} className="p-0.5 rounded text-[8px] text-slate-600 hover:text-red-400 hover:bg-slate-800/60" title="Delete">&#x2715;</button>
+                                                        </div>
+                                                    </button>
+                                                );
+                                            })}
+                                            {loadingThreads && (
+                                                <div className="text-center py-6">
+                                                    <p className="text-[10px] text-slate-500 animate-pulse">Loading threads...</p>
+                                                </div>
+                                            )}
+                                            {!loadingThreads && filteredThreads.length === 0 && (
+                                                <div className="text-center py-6">
+                                                    <p className="text-[10px] text-slate-600">No threads found</p>
+                                                    <p className="text-[8px] text-slate-700 mt-1">Try a different search or create a new thread</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Sidebar Footer */}
+                                <div className="p-2.5 border-t border-slate-800/30 flex items-center justify-between">
+                                    <span className="text-[8px] text-slate-600 font-mono">{threads.length} thread{threads.length !== 1 ? 's' : ''}</span>
+                                    <span className="text-[8px] text-slate-700">{activeMessages.filter(m => m.role !== 'system').length} msgs in thread</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* ── CHAT PANEL ── */}
+                        <div className={`flex flex-col transition-all duration-300 ${canvasOpen ? 'flex-1 min-w-0 border-r border-slate-800/50' : 'flex-1 min-w-0'}`}>
+                            {/* Quick Actions */}
+                            <div className="px-3 py-2 border-b border-slate-800/30 flex flex-wrap gap-1.5" style={{ backgroundColor: 'rgba(8,9,16,0.5)' }}>
+                                {agents.map(a => (
+                                    <button key={'msg-'+a.id} onClick={() => { setSelectedAgent(a.id); inputRef.current?.focus(); }}
+                                        className="px-2 py-1 rounded-md text-[8px] font-bold transition-all hover:opacity-80"
+                                        style={{ backgroundColor: COLORS[a.id].bg, color: COLORS[a.id].text, border: `1px solid ${COLORS[a.id].border}30` }}>
+                                        &#x1F4AC; {a.name}
+                                    </button>
+                                ))}
+                                <div className="w-px h-5 bg-slate-800 mx-1 self-center"></div>
+                                {/* Status check + restart buttons removed — non-functional */}
+                            </div>
+
+                            {/* Messages */}
+                            <div ref={chatRef} className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar" style={{ backgroundColor: 'rgba(6,7,12,0.6)' }}>
+                                {loadingMessages && (
+                                    <div className="flex items-center justify-center py-8">
+                                        <span className="text-[10px] text-slate-500 font-mono animate-pulse">Loading messages...</span>
+                                    </div>
+                                )}
+                                {!loadingMessages && messages.length === 0 && activeThread && (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center">
+                                        <span className="text-2xl mb-2">💬</span>
+                                        <p className="text-[11px] text-slate-400 font-bold">Start a conversation</p>
+                                        <p className="text-[9px] text-slate-600 mt-1">Send a message to {agentName} below</p>
+                                    </div>
+                                )}
+                                {messages.filter(m => m.status !== 'pending' || m.role !== 'agent').map(msg => (
+                                    <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                        {msg.role === 'system' ? (
+                                            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-800/30 border border-slate-700/20 max-w-full">
+                                                <span className="text-[9px]">&#x2699;</span>
+                                                <span className="text-[10px] text-slate-500 font-mono">{msg.text}</span>
+                                                <span className="text-[8px] text-slate-600 ml-auto">{formatTime(msg.time)}</span>
+                                            </div>
+                                        ) : msg.role === 'user' ? (
+                                            <div className="max-w-[75%] flex flex-col items-end gap-1">
+                                                <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md text-[11px] text-white leading-relaxed"
+                                                    style={{ backgroundColor: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                                                    {msg.text}
+                                                </div>
+                                                <span className="text-[8px] text-slate-600 px-1">You {'\u2192'} {agents.find(a => a.id === msg.agent)?.name} &middot; {formatTime(msg.time)}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="max-w-[80%] flex gap-2">
+                                                <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0 mt-1"
+                                                    style={{ backgroundColor: COLORS[msg.agent]?.bg, color: COLORS[msg.agent]?.text, border: `1px solid ${COLORS[msg.agent]?.border}40` }}>
+                                                    {agents.find(a => a.id === msg.agent)?.name[0]}
+                                                </div>
+                                                <div className="flex flex-col gap-1">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-[9px] font-bold" style={{ color: COLORS[msg.agent]?.text }}>{agents.find(a => a.id === msg.agent)?.name}</span>
+                                                        <span className="text-[8px] text-slate-600">{formatTime(msg.time)}</span>
+                                                        {msg.status === 'error' && <span className="text-[8px] text-red-400 font-bold">ERROR</span>}
+                                                    </div>
+                                                    <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-md text-[11px] text-slate-300 leading-relaxed"
+                                                        style={{ backgroundColor: 'rgba(30,32,48,0.8)', border: '1px solid rgba(51,65,85,0.3)' }}>
+                                                        {msg.text}
+                                                    </div>
+                                                    {msg.hasArtifact && msg.artifactId && (
+                                                        <button onClick={() => openArtifact(msg.artifactId)}
+                                                            className="flex items-center gap-2 mt-1 px-3 py-2 rounded-xl border transition-all hover:border-slate-600 self-start"
+                                                            style={{ backgroundColor: 'rgba(139,92,246,0.06)', borderColor: 'rgba(139,92,246,0.2)' }}>
+                                                            <span className="text-sm">{canvasArtifacts[msg.artifactId]?.icon}</span>
+                                                            <div className="flex flex-col items-start">
+                                                                <span className="text-[10px] font-bold text-purple-300">{canvasArtifacts[msg.artifactId]?.title}</span>
+                                                                <span className="text-[8px] text-slate-500">Click to open in Canvas</span>
+                                                            </div>
+                                                            <span className="text-slate-600 text-xs ml-2">&#x2197;</span>
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                                {isTyping && (
+                                    <div className="flex gap-2 items-start">
+                                        <div className="w-6 h-6 rounded-full flex items-center justify-center text-[8px] font-bold flex-shrink-0 mt-1"
+                                            style={{ backgroundColor: COLORS[selectedAgent]?.bg, color: COLORS[selectedAgent]?.text, border: `1px solid ${COLORS[selectedAgent]?.border}40` }}>
+                                            {agentName?.[0]}
+                                        </div>
+                                        <div className="px-4 py-3 rounded-2xl rounded-tl-md" style={{ backgroundColor: 'rgba(30,32,48,0.8)', border: '1px solid rgba(51,65,85,0.3)' }}>
+                                            <div className="flex items-center gap-1.5">
+                                                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: COLORS[selectedAgent]?.border, animationDelay: '0ms' }}></span>
+                                                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: COLORS[selectedAgent]?.border, animationDelay: '150ms' }}></span>
+                                                <span className="w-1.5 h-1.5 rounded-full animate-bounce" style={{ backgroundColor: COLORS[selectedAgent]?.border, animationDelay: '300ms' }}></span>
+                                            </div>
+                                        </div>
+                                        <span className="text-[9px] text-slate-600 self-end font-mono italic">{agentName} is thinking...</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Input Area */}
+                            <div className="p-3 border-t border-slate-800/50" style={{ backgroundColor: 'rgba(10,11,18,0.9)' }}>
+                                <div className="flex items-end gap-2">
+                                    <div className="flex-1 relative">
+                                        <textarea ref={inputRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
+                                            placeholder={`Message ${agentName}...`} rows={1}
+                                            className="w-full bg-slate-900/70 border border-slate-700/50 rounded-xl px-4 py-2.5 text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/40 placeholder-slate-600 resize-none leading-relaxed"
+                                            style={{ minHeight: '40px', maxHeight: '100px' }} />
+                                    </div>
+                                    <button onClick={sendMessage} disabled={!inputValue.trim() || isTyping}
+                                        className="px-4 py-2.5 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-40"
+                                        style={{ backgroundColor: inputValue.trim() && !isTyping ? '#6366f1' : '#1e293b', color: inputValue.trim() && !isTyping ? 'white' : '#475569' }}>
+                                        Send &#x27A1;
+                                    </button>
+                                </div>
+                                <div className="flex items-center justify-between mt-1.5 px-1">
+                                    <p className="text-[8px] text-slate-600">
+                                        Talking to <span className="font-bold" style={{ color: agentColor?.text }}>{'\u2022'} {agentName}</span>
+                                        {' '}&middot; Press Enter to send
+                                    </p>
+                                    <span className="text-[8px] text-slate-700 font-mono">{activeMessages.filter(m => m.role !== 'system').length} messages</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ── CANVAS / COWORK PANEL ── */}
+                        {canvasOpen && (
+                            <div className="w-[45%] flex-shrink-0 flex flex-col" style={{ backgroundColor: 'rgba(8,9,16,0.95)' }}>
+                                {/* Canvas Header */}
+                                <div className="px-4 py-2.5 border-b border-slate-800/50 flex items-center justify-between" style={{ backgroundColor: 'rgba(14,14,22,0.95)' }}>
+                                    <div className="flex items-center gap-2 min-w-0">
+                                        <span className="text-sm flex-shrink-0">{activeArtifact?.icon}</span>
+                                        <div className="min-w-0">
+                                            <h4 className="text-[11px] font-bold text-white truncate">{activeArtifact?.title}</h4>
+                                            <div className="flex items-center gap-1.5 mt-0.5">
+                                                <span className="text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
+                                                    style={{
+                                                        backgroundColor: activeArtifact?.type === 'code' ? 'rgba(59,130,246,0.12)' :
+                                                            activeArtifact?.type === 'spreadsheet' ? 'rgba(16,185,129,0.12)' :
+                                                            activeArtifact?.type === 'design' ? 'rgba(236,72,153,0.12)' : 'rgba(139,92,246,0.12)',
+                                                        color: activeArtifact?.type === 'code' ? '#60a5fa' :
+                                                            activeArtifact?.type === 'spreadsheet' ? '#34d399' :
+                                                            activeArtifact?.type === 'design' ? '#f472b6' : '#a78bfa',
+                                                    }}>{activeArtifact?.type}</span>
+                                                <span className="text-[8px] text-slate-600">&middot; Auto-generated</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <button className="px-2 py-1 rounded-md text-[8px] font-bold text-slate-400 hover:text-white bg-slate-800/40 border border-slate-700/30 transition-all">
+                                            &#x1F4CB; Copy
+                                        </button>
+                                        <button className="px-2 py-1 rounded-md text-[8px] font-bold text-slate-400 hover:text-white bg-slate-800/40 border border-slate-700/30 transition-all">
+                                            &#x2B07; Export
+                                        </button>
+                                        <button onClick={() => setCanvasOpen(false)}
+                                            className="px-2 py-1 rounded-md text-[8px] font-bold text-slate-400 hover:text-red-400 bg-slate-800/40 border border-slate-700/30 transition-all">
+                                            &#x2715;
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Canvas Tabs */}
+                                {canvasHistory.length > 1 && (
+                                    <div className="flex items-center gap-1 px-3 py-1.5 border-b border-slate-800/30 overflow-x-auto custom-scrollbar" style={{ backgroundColor: 'rgba(10,11,18,0.7)' }}>
+                                        {canvasHistory.map(h => (
+                                            <button key={h.id} onClick={() => { setActiveArtifact(h); }}
+                                                className="flex items-center gap-1 px-2 py-1 rounded-md text-[8px] font-bold flex-shrink-0 transition-all"
+                                                style={{
+                                                    backgroundColor: activeArtifact?.id === h.id ? 'rgba(139,92,246,0.12)' : 'transparent',
+                                                    color: activeArtifact?.id === h.id ? '#a78bfa' : '#64748b',
+                                                    border: activeArtifact?.id === h.id ? '1px solid rgba(139,92,246,0.2)' : '1px solid transparent',
+                                                }}>
+                                                <span className="text-[9px]">{h.icon}</span>
+                                                {h.title.length > 18 ? h.title.slice(0, 18) + '...' : h.title}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Canvas Content */}
+                                <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+                                    <div className={`${activeArtifact?.type === 'code' ? 'font-mono text-[10px]' : ''}`}
+                                        style={{
+                                            backgroundColor: activeArtifact?.type === 'code' ? 'rgba(15,15,30,0.8)' : 'transparent',
+                                            padding: activeArtifact?.type === 'code' ? '16px' : '0',
+                                            borderRadius: activeArtifact?.type === 'code' ? '12px' : '0',
+                                            border: activeArtifact?.type === 'code' ? '1px solid rgba(51,65,85,0.3)' : 'none',
+                                        }}>
+                                        {activeArtifact?.type === 'code' ? (
+                                            <pre className="text-[10px] text-emerald-300/90 leading-relaxed whitespace-pre-wrap">{activeArtifact.content}</pre>
+                                        ) : (
+                                            renderMarkdown(activeArtifact?.content || '')
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Canvas Footer */}
+                                <div className="px-4 py-2 border-t border-slate-800/40 flex items-center justify-between" style={{ backgroundColor: 'rgba(10,11,18,0.8)' }}>
+                                    <span className="text-[8px] text-slate-600 font-mono">
+                                        {activeArtifact?.type === 'code' ? 'TOML' : activeArtifact?.type === 'spreadsheet' ? 'Markdown Table' : 'Document'} &middot; {activeArtifact?.content?.split('\n').length} lines
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <span className="flex items-center gap-1 text-[8px] text-emerald-500 font-bold">
+                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Synced
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </section>
+            );
+        };
+
+        /* ── Durable Execution Trace (NEW — matches TensorLake reference) ── */
+        const DurableExecutionTrace = () => {
+            const [phaseIdx, setPhaseIdx] = useState(0);
+            const [visibleLogs, setVisibleLogs] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(true);
+            const [selectedAgent, setSelectedAgent] = useState('tia');
+            const intervalRef = useRef(null);
+            const logRef = useRef(null);
+
+            const phase = executionPhases[phaseIdx];
+            const totalLogs = phase.logs.length;
+
+            useEffect(() => {
+                if (!isPlaying) { clearInterval(intervalRef.current); return; }
+                intervalRef.current = setInterval(() => {
+                    setVisibleLogs(prev => {
+                        if (prev >= totalLogs) {
+                            setPhaseIdx(p => (p + 1) % executionPhases.length);
+                            return 0;
+                        }
+                        return prev + 1;
+                    });
+                }, 2000);
+                return () => clearInterval(intervalRef.current);
+            }, [isPlaying, phaseIdx, totalLogs]);
+
+            useEffect(() => { setVisibleLogs(0); }, [phaseIdx]);
+            useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [visibleLogs]);
+
+            const toolStatusStyles = {
+                idle:    { border: '#334155', bg: 'rgba(51,65,85,0.15)', text: '#64748b', icon: '' },
+                queued:  { border: '#475569', bg: 'rgba(71,85,105,0.1)', text: '#94a3b8', icon: '...' },
+                active:  { border: '#10b981', bg: 'rgba(16,185,129,0.08)', text: '#34d399', icon: '\u25B6', glow: 'trace-pulse' },
+                done:    { border: '#10b981', bg: 'rgba(16,185,129,0.05)', text: '#6ee7b7', icon: '\u2713' },
+                error:   { border: '#ef4444', bg: 'rgba(239,68,68,0.08)', text: '#f87171', icon: '\u2717', glow: 'trace-pulse-red' },
+                blocked: { border: '#ef4444', bg: 'rgba(239,68,68,0.04)', text: '#fca5a5', icon: '\u26D4' },
+                retry:   { border: '#3b82f6', bg: 'rgba(59,130,246,0.08)', text: '#60a5fa', icon: '\u21BB', glow: 'trace-pulse-blue' },
+            };
+
+            const logStyles = {
+                system:   { prefix: '>', color: '#64748b', prefixColor: '#475569' },
+                thought:  { prefix: '\u2192', color: '#a5b4fc', prefixColor: '#8b5cf6' },
+                decision: { prefix: '\u2666', color: '#c4b5fd', prefixColor: '#8b5cf6' },
+                code:     { prefix: '$', color: '#93c5fd', prefixColor: '#3b82f6', mono: true },
+                success:  { prefix: '\u2713', color: '#6ee7b7', prefixColor: '#10b981' },
+                error:    { prefix: '\u2717', color: '#fca5a5', prefixColor: '#ef4444', isError: true },
+            };
+
+            const phaseAnimClass = phase.id === 'error' ? 'trace-pulse-red' : phase.id === 'plan' ? 'trace-pulse-purple' : phase.id === 'correct' ? 'trace-pulse-blue' : 'trace-pulse';
+            const coreBorderColor = phase.id === 'error' ? '#ef4444' : phase.id === 'plan' ? '#8b5cf6' : phase.id === 'correct' ? '#3b82f6' : '#10b981';
+
+            return (
+                <div className="bg-[#090912]/95 border rounded-2xl overflow-hidden" style={{ borderColor: phase.statusColor + '30' }}>
+                    {/* Header */}
+                    <div className="px-4 py-3 flex items-center justify-between flex-wrap gap-2" style={{ borderBottom: `1px solid ${phase.statusColor}20` }}>
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: phase.statusColor + '15', border: `1px solid ${phase.statusColor}30` }}>
+                                <span className="text-xs" style={{ color: phase.statusColor }}>&#x2699;</span>
+                            </div>
+                            <div>
+                                <h3 className="text-xs font-bold text-white tracking-wide font-mono flex items-center gap-2">
+                                    DURABLE EXECUTION TRACE
+                                </h3>
+                                <p className="text-[8px] text-slate-500 font-mono mt-0.5">Agent: <span style={{ color: COLORS[selectedAgent]?.text }}>{agents.find(a => a.id === selectedAgent)?.name}</span> &middot; Task: ARS Lead Scrape</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            <select value={selectedAgent} onChange={e => setSelectedAgent(e.target.value)}
+                                className="bg-[#0c0c18]/90 border border-slate-700/50 text-[10px] text-slate-300 rounded-lg px-2 py-1 focus:outline-none font-mono">
+                                {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select>
+                            <span className="px-3 py-1.5 rounded-lg text-[10px] font-bold font-mono tracking-wider border" style={{
+                                backgroundColor: phase.statusColor + '15', color: phase.statusColor, borderColor: phase.statusColor + '40',
+                            }}>{phase.statusBadge}</span>
+                            <button onClick={() => setIsPlaying(!isPlaying)}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#0c0c18]/90 border border-slate-700/40 text-slate-400 hover:text-white hover:border-slate-600 transition-all">
+                                {isPlaying ? '\u23F8 PAUSE' : '\u25B6 PLAY'}
+                            </button>
+                            <button onClick={() => { setPhaseIdx(0); setVisibleLogs(0); }}
+                                className="px-2.5 py-1.5 rounded-lg text-[10px] font-mono font-bold bg-[#0c0c18]/90 border border-slate-700/40 text-slate-400 hover:text-white hover:border-slate-600 transition-all">
+                                {'\u21BB'} RESET
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Phase Step Indicators */}
+                    <div className="flex items-center px-5 py-2.5 gap-1" style={{ backgroundColor: 'rgba(8,9,16,0.92)' }}>
+                        {executionPhases.map((p, i) => {
+                            const isActive = i === phaseIdx;
+                            const isDone = i < phaseIdx;
+                            const c = p.statusColor;
+                            return (
+                                <React.Fragment key={p.id}>
+                                    <button onClick={() => { setPhaseIdx(i); setVisibleLogs(0); }}
+                                        className="flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[9px] font-mono font-bold uppercase tracking-wider transition-all"
+                                        style={{
+                                            backgroundColor: isActive ? c + '15' : 'transparent',
+                                            color: isActive ? c : isDone ? c + 'aa' : '#334155',
+                                            border: isActive ? `1px solid ${c}30` : '1px solid transparent',
+                                        }}>
+                                        <span className="w-3 h-3 rounded-full flex items-center justify-center text-[7px] border" style={{
+                                            borderColor: isActive || isDone ? c : '#334155',
+                                            backgroundColor: isDone ? c + '30' : 'transparent',
+                                            color: isDone ? c : isActive ? c : '#334155',
+                                        }}>{isDone ? '\u2713' : isActive ? '\u25CF' : ''}</span>
+                                        {p.label}
+                                    </button>
+                                    {i < executionPhases.length - 1 && (
+                                        <div className="flex-1 h-px max-w-[40px]" style={{ backgroundColor: i < phaseIdx ? c + '60' : '#1e293b' }}></div>
+                                    )}
+                                </React.Fragment>
+                            );
+                        })}
+                    </div>
+
+                    {/* Main Visualization Area */}
+                    <div className="flex min-h-[280px]" style={{ backgroundColor: 'rgba(8,9,16,0.92)' }}>
+                        {/* LEFT: Agent Runtime Box */}
+                        <div className="w-[180px] flex-shrink-0 p-3 flex flex-col items-center justify-center trace-grid-bg relative">
+                            <div className="rounded-xl p-3 border relative" style={{
+                                borderColor: coreBorderColor + '40',
+                                backgroundColor: coreBorderColor + '06',
+                                animation: `${phaseAnimClass} 3s ease-in-out infinite`,
+                            }}>
+                                <div className="text-[9px] font-mono font-bold uppercase tracking-widest text-center mb-3" style={{ color: coreBorderColor + 'cc' }}>
+                                    AGENT RUNTIME
+                                </div>
+                                {/* 2x2 Core Grid */}
+                                <div className="grid grid-cols-2 gap-2 mb-3">
+                                    {[0, 1, 2, 3].map(coreIdx => {
+                                        const isActive = phase.activeCore.includes(coreIdx);
+                                        return (
+                                            <div key={coreIdx} className="w-10 h-10 rounded-lg border flex items-center justify-center transition-all" style={{
+                                                borderColor: isActive ? coreBorderColor + '60' : '#1e293b',
+                                                backgroundColor: isActive ? coreBorderColor + '12' : '#0d1120',
+                                                animation: isActive ? `core-spin ${1.5 + coreIdx * 0.3}s ease-in-out infinite ${coreIdx * 0.2}s` : 'none',
+                                            }}>
+                                                <div className="w-5 h-5 rounded" style={{
+                                                    backgroundColor: isActive ? coreBorderColor + '30' : '#1a1e2e',
+                                                    border: `1px solid ${isActive ? coreBorderColor + '50' : '#252a3a'}`,
+                                                }}></div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <div className="text-[8px] font-mono font-bold uppercase tracking-widest text-center py-1.5 rounded-md border" style={{
+                                    color: coreBorderColor, borderColor: coreBorderColor + '40', backgroundColor: coreBorderColor + '10',
+                                }}>AGENT HARNESS</div>
+                            </div>
+                            {/* Connection line to tools */}
+                            <div className="absolute right-0 top-1/2 -translate-y-1/2 flex items-center">
+                                <div className="w-8 h-0.5 relative overflow-hidden" style={{ backgroundColor: coreBorderColor + '20' }}>
+                                    <div className="absolute top-0 w-2 h-full rounded-full" style={{ backgroundColor: coreBorderColor, animation: 'signal-flow 1.5s ease-in-out infinite' }}></div>
+                                </div>
+                                <div className="w-2.5 h-2.5 rounded-full border-2" style={{ borderColor: coreBorderColor, backgroundColor: coreBorderColor + '30' }}></div>
+                            </div>
+                        </div>
+
+                        {/* CENTER: Tool Chain Nodes */}
+                        <div className="flex-1 py-5 px-4 flex flex-col justify-center gap-2 relative trace-grid-bg">
+                            {phase.id === 'error' && <div className="absolute inset-0 error-scanline pointer-events-none"></div>}
+                            {phase.tools.map((tool, i) => {
+                                const ts = toolStatusStyles[tool.status];
+                                return (
+                                    <div key={tool.name} className="flex items-center gap-3 reasoning-line" style={{ animationDelay: `${i * 0.08}s` }}>
+                                        {/* Connection dash */}
+                                        <div className="w-6 h-px flex-shrink-0" style={{ backgroundColor: ts.border + '40' }}></div>
+                                        {/* Tool Node */}
+                                        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border font-mono text-[10px] font-bold transition-all min-w-[140px]" style={{
+                                            borderColor: ts.border + '50', backgroundColor: ts.bg, color: ts.text,
+                                            animation: ts.glow ? `${ts.glow} 2.5s ease-in-out infinite` : 'none',
+                                        }}>
+                                            <span className="text-[9px] w-3 text-center flex-shrink-0">{ts.icon}</span>
+                                            <span>[{tool.name}]</span>
+                                            {tool.status === 'active' && (
+                                                <span className="ml-auto flex items-center gap-1">
+                                                    <span className="w-1 h-1 rounded-full animate-ping" style={{ backgroundColor: ts.border }}></span>
+                                                </span>
+                                            )}
+                                            {tool.status === 'error' && (
+                                                <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: 'rgba(239,68,68,0.2)', color: '#f87171' }}>FAIL</span>
+                                            )}
+                                            {tool.status === 'retry' && (
+                                                <span className="ml-auto text-[8px] px-1.5 py-0.5 rounded font-bold" style={{ backgroundColor: 'rgba(59,130,246,0.2)', color: '#60a5fa' }}>RETRY</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* RIGHT: Stats Sidebar */}
+                        <div className="w-[120px] flex-shrink-0 p-3 border-l flex flex-col gap-2 justify-center" style={{ borderColor: '#1e293b50' }}>
+                            {[
+                                { label: 'TOKENS', value: '2,418', color: '#94a3b8' },
+                                { label: 'COST', value: '$0.03', color: '#94a3b8' },
+                                { label: 'RETRIES', value: phaseIdx >= 3 ? '2' : phaseIdx >= 2 ? '1' : '0', color: phaseIdx >= 2 ? '#facc15' : '#94a3b8' },
+                                { label: 'ERRORS', value: phaseIdx >= 2 ? '2' : '0', color: phaseIdx >= 2 ? '#f87171' : '#94a3b8' },
+                                { label: 'FIXED', value: phaseIdx >= 3 ? '2' : '0', color: phaseIdx >= 3 ? '#34d399' : '#94a3b8' },
+                                { label: 'CONFIDENCE', value: phaseIdx === 0 ? '94%' : phaseIdx === 1 ? '87%' : phaseIdx === 2 ? '62%' : '99%', color: phaseIdx === 2 ? '#f87171' : phaseIdx === 3 ? '#34d399' : '#94a3b8' },
+                            ].map((s, i) => (
+                                <div key={i}>
+                                    <div className="text-[7px] font-mono font-bold text-slate-600 uppercase tracking-widest mb-0.5">{s.label}</div>
+                                    <div className="text-sm font-mono font-bold" style={{ color: s.color }}>{s.value}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Terminal Log Output */}
+                    <div className="border-t" style={{ borderColor: phase.statusColor + '20', backgroundColor: 'rgba(6,7,12,0.95)' }}>
+                        <div className="px-4 py-2 flex items-center justify-between" style={{ borderBottom: '1px solid #0f1525' }}>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-mono font-bold" style={{ color: phase.statusColor }}>&#x276F;_</span>
+                                <span className="text-[9px] font-mono text-slate-500">EXECUTION LOG</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[8px] font-mono text-slate-600">
+                                <span>STEP {phaseIdx + 1}/4</span>
+                                <span>&middot;</span>
+                                <span>{visibleLogs}/{totalLogs} ops</span>
+                            </div>
+                        </div>
+                        <div ref={logRef} className="p-3 max-h-[120px] overflow-y-auto custom-scrollbar font-mono space-y-1">
+                            {phase.logs.slice(0, visibleLogs).map((log, i) => {
+                                const ls = logStyles[log.type];
+                                return (
+                                    <div key={`${phaseIdx}-${i}`} className="flex items-start gap-2 text-[10px] leading-relaxed" style={{ animation: 'log-appear 0.3s ease-out forwards' }}>
+                                        <span className="flex-shrink-0 w-3 text-center font-bold" style={{ color: ls.prefixColor }}>{ls.prefix}</span>
+                                        <span className={ls.mono ? 'font-mono' : ''} style={{
+                                            color: ls.color,
+                                            textShadow: ls.isError ? '0 0 8px rgba(239,68,68,0.3)' : 'none',
+                                        }}>{log.text}</span>
+                                    </div>
+                                );
+                            })}
+                            {visibleLogs < totalLogs && isPlaying && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] font-bold" style={{ color: phase.statusColor, animation: 'blink-cursor 1s step-end infinite' }}>&#x276F;</span>
+                                    <span className="text-[10px] text-slate-600 italic">processing...</span>
+                                </div>
+                            )}
+                            {visibleLogs >= totalLogs && phaseIdx < executionPhases.length - 1 && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] text-slate-600">&gt; Advancing to next phase...</span>
+                                </div>
+                            )}
+                            {visibleLogs >= totalLogs && phaseIdx === executionPhases.length - 1 && (
+                                <div className="flex items-center gap-1.5 pt-1">
+                                    <span className="text-[10px] font-bold text-emerald-400">&gt; Execution complete. All tools resolved.</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Auth Gate ── */
+        const AuthGate = ({ children }) => {
+            const [authed, setAuthed] = useState(!!localStorage.getItem('mc_auth_token'));
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+            const [checking, setChecking] = useState(false);
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                if (!password.trim()) return;
+                setChecking(true);
+                setError('');
+                try {
+                    const r = await fetch(`${window.location.origin}/api/chat?token=${encodeURIComponent(password.trim())}`);
+                    if (r.ok) {
+                        localStorage.setItem('mc_auth_token', password.trim());
+                        setAuthed(true);
+                    } else {
+                        setError('Invalid access token');
+                    }
+                } catch (err) {
+                    setError('Connection failed');
+                }
+                setChecking(false);
+            };
+
+            if (authed) return children;
+
+            return (
+                <div className="min-h-screen flex items-center justify-center relative" style={{ background: '#0a0a0f' }}>
+                    <div className="bg-animated">
+                        <div className="bg-orb bg-orb-1"></div>
+                        <div className="bg-orb bg-orb-2"></div>
+                        <div className="bg-orb bg-orb-3"></div>
+                        <div className="bg-grid-overlay"></div>
+                    </div>
+                    <div className="relative z-10 flex flex-col items-center gap-6 w-full max-w-xs">
+                        <div className="rounded-2xl shadow-lg shadow-indigo-500/20 overflow-hidden" style={{ width: '64px', height: '64px' }}>
+                            <img src="OpenClaw_icon.svg" alt="OpenClaw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                        <div className="text-center">
+                            <h1 className="text-xl font-bold text-white tracking-tight">Mission Control</h1>
+                            <p className="text-[11px] text-slate-500 mt-1">Enter access token to continue</p>
+                        </div>
+                        <form onSubmit={handleLogin} className="w-full space-y-3">
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={e => setPassword(e.target.value)}
+                                placeholder="Access token..."
+                                autoFocus
+                                className="w-full bg-[#0e0e16] border border-slate-700/60 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/40 placeholder-slate-600"
+                            />
+                            {error && <p className="text-[11px] text-red-400 text-center">{error}</p>}
+                            <button type="submit" disabled={checking}
+                                className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm py-3 rounded-xl transition-all">
+                                {checking ? 'Verifying...' : 'Enter Mission Control'}
+                            </button>
+                        </form>
+                        <p className="text-[9px] text-slate-700 mt-2">OpenClaw &middot; Intuitive Labs</p>
+                    </div>
+                </div>
+            );
+        };
+
+        /* ── Main App ── */
+        /* ── Live Data Fetcher ── */
+        const API_BASE = window.location.origin;
+        const fetchJSON = async (path) => {
+            try {
+                const token = localStorage.getItem('mc_auth_token') || '';
+                const separator = path.includes('?') ? '&' : '?';
+                const r = await fetch(`${API_BASE}${path}${separator}token=${encodeURIComponent(token)}`, {
+                    headers: { 'X-MC-Token': token },
+                });
+                if (!r.ok) return null;
+                return await r.json();
+            } catch { return null; }
+        };
+
+        const App = () => {
+            const [time, setTime] = useState(new Date());
+            const [autoRefresh, setAutoRefresh] = useState(true);
+            const [boardColumns, setBoardColumns] = useState(initialBoardColumns);
+            const [liveAgents, setLiveAgents] = useState(agents);
+            const [liveActivity, setLiveActivity] = useState(activityFeedData);
+            const [liveCrons, setLiveCrons] = useState(cronJobs);
+            const [dataSource, setDataSource] = useState('static'); // 'static' | 'live'
+            const [draggingTaskId, setDraggingTaskId] = useState(null);
+            const [dragOverCol, setDragOverCol] = useState(null);
+            const [detailTask, setDetailTask] = useState(null);
+            const [detailColId, setDetailColId] = useState(null);
+
+            // Fetch live data on mount and every 30s when autoRefresh is on
+            useEffect(() => {
+                const fetchAll = async () => {
+                    // Tasks
+                    const taskData = await fetchJSON('/api/tasks');
+                    if (taskData?.columns?.length > 0) {
+                        setBoardColumns(taskData.columns);
+                        setDataSource('live');
+                    }
+                    // Agents
+                    const agentData = await fetchJSON('/api/agents');
+                    if (agentData?.agents?.length > 0) {
+                        setLiveAgents(agentData.agents);
+                    }
+                    // Activity
+                    const actData = await fetchJSON('/api/activity');
+                    if (actData?.events?.length > 0) {
+                        const formatted = actData.events.map(e => {
+                            const d = new Date(e.time);
+                            const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+                            const timeStr = diff < 1 ? 'just now' : diff < 60 ? `${diff}m ago` : `${Math.floor(diff/60)}h ago`;
+                            return { time: timeStr, agent: e.agent, color: COLORS[e.agent]?.text || '#94a3b8', text: e.text };
+                        });
+                        setLiveActivity(formatted);
+                    }
+                    // Crons
+                    const cronData = await fetchJSON('/api/crons');
+                    if (cronData?.cronJobs) {
+                        const merged = { ...cronJobs };
+                        for (const [k, v] of Object.entries(cronData.cronJobs)) {
+                            if (v.length > 0) merged[k] = v;
+                        }
+                        setLiveCrons(merged);
+                    }
+                };
+                fetchAll();
+                if (!autoRefresh) return;
+                const iv = setInterval(fetchAll, 30000);
+                return () => clearInterval(iv);
+            }, [autoRefresh]);
+
+            // Sync task update to ClickUp API
+            const syncTaskToClickUp = useCallback(async (taskId, updates) => {
+                try {
+                    const token = localStorage.getItem('mc_auth_token') || '';
+                    await fetch(`${API_BASE}/api/tasks`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'X-MC-Token': token },
+                        body: JSON.stringify({ taskId, ...updates }),
+                    });
+                } catch (e) { console.error('ClickUp sync failed:', e); }
+            }, []);
+
+            const handleDrop = useCallback((e, targetColId) => {
+                e.preventDefault();
+                setDragOverCol(null);
+                try {
+                    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    const { taskId, sourceColId } = data;
+                    if (sourceColId === targetColId) return;
+
+                    setBoardColumns(prev => {
+                        const newCols = prev.map(col => ({ ...col, tasks: [...col.tasks] }));
+                        const sourceCol = newCols.find(c => c.id === sourceColId);
+                        const targetCol = newCols.find(c => c.id === targetColId);
+                        if (!sourceCol || !targetCol) return prev;
+
+                        const taskIdx = sourceCol.tasks.findIndex(t => t.id === taskId);
+                        if (taskIdx === -1) return prev;
+
+                        const [task] = sourceCol.tasks.splice(taskIdx, 1);
+                        targetCol.tasks.push(task);
+                        return newCols;
+                    });
+
+                    // Bi-directional sync: update status in ClickUp
+                    syncTaskToClickUp(taskId, { status: targetColId });
+                } catch (err) { /* ignore invalid drag data */ }
+                setDraggingTaskId(null);
+            }, [syncTaskToClickUp]);
+
+            const handleDragOver = useCallback((e, colId) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                setDragOverCol(colId);
+            }, []);
+
+            const handleDragLeave = useCallback((e) => {
+                if (!e.currentTarget.contains(e.relatedTarget)) {
+                    setDragOverCol(null);
+                }
+            }, []);
+
+            const openTaskDetail = useCallback((task, colId) => {
+                setDetailTask(task);
+                setDetailColId(colId);
+            }, []);
+
+            const handleTaskUpdate = useCallback((taskId, updates) => {
+                if (updates.status && updates.status !== detailColId) {
+                    // Move task between columns
+                    setBoardColumns(prev => {
+                        const newCols = prev.map(col => ({ ...col, tasks: [...col.tasks] }));
+                        let task = null;
+                        for (const col of newCols) {
+                            const idx = col.tasks.findIndex(t => t.id === taskId);
+                            if (idx !== -1) { task = col.tasks.splice(idx, 1)[0]; break; }
+                        }
+                        if (task) {
+                            const targetCol = newCols.find(c => c.id === updates.status);
+                            if (targetCol) targetCol.tasks.push(task);
+                        }
+                        return newCols;
+                    });
+                }
+                if (updates.priority) {
+                    setBoardColumns(prev => prev.map(col => ({
+                        ...col,
+                        tasks: col.tasks.map(t => t.id === taskId ? { ...t, priority: updates.priority } : t)
+                    })));
+                }
+            }, [detailColId]);
+
+            useEffect(() => {
+                const t = setInterval(() => setTime(new Date()), 1000);
+                return () => clearInterval(t);
+            }, []);
+
+            const timeStr = time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true, timeZone: 'America/Los_Angeles' });
+
+            return (
+                <div className="min-h-screen text-slate-300 font-sans relative" style={{ background: 'transparent' }}>
+                    {/* ── ANIMATED BACKGROUND ── */}
+                    <div className="bg-animated">
+                        <div className="bg-orb bg-orb-1"></div>
+                        <div className="bg-orb bg-orb-2"></div>
+                        <div className="bg-orb bg-orb-3"></div>
+                        <div className="bg-grid-overlay"></div>
+                    </div>
+
+                    {/* ── HEADER ── */}
+                    <header className="flex items-center justify-between px-6 py-3 border-b border-slate-800/70 relative z-10" style={{ background: 'rgba(13,15,23,0.85)', backdropFilter: 'blur(12px)' }}>
+                        <div className="flex items-center gap-3">
+                            <div className="rounded-xl shadow-lg shadow-indigo-500/20 overflow-hidden" style={{ width: '36px', height: '36px' }}>
+                                <img src="OpenClaw_icon.svg" alt="OpenClaw" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                            <h1 className="text-base font-bold text-white tracking-tight">Mission Control</h1>
+                            <Badge color="rgba(16,185,129,0.15)" textColor="#34d399">SWARM V1.0</Badge>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Badge color="rgba(16,185,129,0.12)" textColor="#10b981">
+                                <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Swarm Healthy</span>
+                            </Badge>
+                            <Badge color={dataSource === 'live' ? 'rgba(59,130,246,0.15)' : 'rgba(234,179,8,0.15)'} textColor={dataSource === 'live' ? '#60a5fa' : '#facc15'}>
+                                {dataSource === 'live' ? '\u26A1 LIVE DATA' : '\u23F8 STATIC'}
+                            </Badge>
+                        </div>
+                        <div className="flex items-center gap-4 text-[10px]">
+                            <span className="text-indigo-400 font-mono font-bold">{timeStr} PST</span>
+                            <span className="text-slate-500">Last refresh: {timeStr}</span>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setAutoRefresh(!autoRefresh)}
+                                    className={`w-8 h-4 rounded-full relative transition-all ${autoRefresh ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${autoRefresh ? 'left-4' : 'left-0.5'}`}></div>
+                                </button>
+                                <span className="text-slate-400 font-bold">AUTO</span>
+                            </div>
+                            <button className="p-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-700 transition-all text-slate-400">&#x2699;</button>
+                        </div>
+                    </header>
+
+                    <main className="p-4 md:p-5 max-w-[1920px] mx-auto space-y-4 relative z-10">
+                        {/* ── KPI ROW ── */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {[
+                                { icon: '&#x1F4AC;', label: 'SESSIONS', val: '0', color: '#8b5cf6' },
+                                { icon: '&#x1F4B0;', label: 'TOKENS', val: '0', color: '#eab308' },
+                                { icon: '&#x26A1;', label: 'COST', val: '$0.00', color: '#10b981' },
+                                { icon: '&#x1F6E1;', label: 'UPTIME', val: '100.0%', color: '#3b82f6' },
+                                { icon: '&#x1F4E8;', label: 'MESSAGES', val: '0', color: '#ec4899' },
+                            ].map((kpi, i) => (
+                                <div key={i} className="bg-[#0e0e16]/80 border border-slate-800/50 rounded-md px-2.5 py-1 flex items-center gap-2 hover:border-slate-700 transition-all">
+                                    <span dangerouslySetInnerHTML={{ __html: kpi.icon }} className="text-[8px]"></span>
+                                    <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">{kpi.label}</span>
+                                    <span className="text-[11px] font-bold font-mono" style={{ color: kpi.color }}>{kpi.val}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* ── CLIENT GROUPS (Wallet-Style Stacked Agent Cards) ── */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                            {clientGroups.map(group => <ClientGroup key={group.id} group={group} allAgents={liveAgents} />)}
+                        </div>
+
+                        {/* ── TASK BOARD + ACTIVITY FEED ── */}
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                                    <span>&#x1F4CB;</span> Task Board
+                                </h2>
+                                <button className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1.5">
+                                    + New Task
+                                </button>
+                            </div>
+                            <div className="flex gap-4 overflow-x-auto pb-2">
+                                {/* Board Columns */}
+                                <div className="flex gap-3 flex-shrink-0" style={{ minWidth: 'max-content' }}>
+                                    {boardColumns.map(col => (
+                                        <div key={col.id} className="w-[210px] flex-shrink-0"
+                                            onDragOver={(e) => handleDragOver(e, col.id)}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={(e) => handleDrop(e, col.id)}>
+                                            <div className="flex items-center justify-between mb-3 px-1">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }}></span>
+                                                    <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: col.color }}>{col.title}</span>
+                                                </div>
+                                                <span className="text-[9px] bg-slate-800/80 text-slate-500 px-1.5 py-0.5 rounded-md font-mono">{col.tasks.length}</span>
+                                            </div>
+                                            <div className="space-y-2.5 min-h-[60px] rounded-xl p-1 transition-all"
+                                                style={{
+                                                    backgroundColor: dragOverCol === col.id ? col.color + '08' : 'transparent',
+                                                    border: dragOverCol === col.id ? `1.5px dashed ${col.color}40` : '1.5px dashed transparent',
+                                                }}>
+                                                {col.tasks.map(task => (
+                                                    <TaskCard
+                                                        key={task.id}
+                                                        task={task}
+                                                        colColor={col.color}
+                                                        colId={col.id}
+                                                        columns={boardColumns}
+                                                        onDragStart={setDraggingTaskId}
+                                                        isDragging={draggingTaskId === task.id}
+                                                        onOpenDetail={openTaskDetail}
+                                                    />
+                                                ))}
+                                                {col.tasks.length === 0 && (
+                                                    <div className="flex items-center justify-center py-6 text-[9px] text-slate-600 italic">
+                                                        Drop tasks here
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                            </div>
+                        </section>
+
+                        {/* ── COMMAND CENTER (Functional Chat + Canvas Cowork) ── */}
+                        <CommandCenter />
+
+                        {/* ── DURABLE EXECUTION TRACE + NETWORK TOPOLOGY + ACTIVITY FEED ── */}
+                        <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr_280px] gap-4">
+                            <section className="min-w-0">
+                                <DurableExecutionTrace />
+                            </section>
+
+                            <section className="bg-[#0e0e16]/90 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+                                <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                                    <h3 className="text-xs font-bold text-white flex items-center gap-2"><span>&#x1F310;</span> Network Topology</h3>
+                                    <button className="text-slate-500 hover:text-slate-300 transition-all text-xs">&#x2B06;</button>
+                                </div>
+                                <div className="flex-1 flex items-center justify-center relative overflow-hidden grid-bg">
+                                    <div className="relative flex flex-col lg:flex-row items-center gap-5 lg:gap-6 px-4 py-5">
+                                        {/* Local Cluster — Iva's Mac mini */}
+                                        {(() => {
+                                            const localAgentIds = ['iva', 'joy'];
+                                            const dropletAgentIds = ['ivan', 'arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'tia'];
+                                            const getAgent = (id) => liveAgents.find(a => a.id === id) || agents.find(a => a.id === id);
+                                            const shortName = { iva: 'Iva', joy: 'JOY', ivan: 'IVAN', arvis_sales: 'ARVIS-S', arvis_recruit: 'ARVIS-R', arvis_admin: 'ARVIS-A', arvis_prod: 'ARVIS-P', tia: 'TIA' };
+                                            const shortModel = { iva: 'Opus 4.6' };
+                                            return (
+                                                <>
+                                                <div className="flex flex-col items-center gap-2.5">
+                                                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">&#x1F5A5; IVA'S MAC MINI</div>
+                                                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-2.5 space-y-1.5 min-w-[120px]" style={{ animation: 'node-pulse 3s ease-in-out infinite' }}>
+                                                        {localAgentIds.map(id => { const a = getAgent(id); const c = COLORS[id]; return (
+                                                            <div key={id} className="flex items-center gap-1.5 bg-[#11111b]/90 rounded-lg px-2 py-1.5 border" style={{ borderColor: c.border + '40' }}>
+                                                                <StatusDot status={a?.status || 'offline'} /><span className="text-[9px] font-bold" style={{ color: c.text }}>{shortName[id]}</span>
+                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">{shortModel[id] || 'K2.5'}</span>
+                                                            </div>
+                                                        ); })}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col items-center gap-1.5">
+                                                    <div className="w-12 lg:w-16 h-0.5 bg-slate-700/40 relative overflow-hidden rounded-full">
+                                                        <div className="absolute top-0 h-full w-6 bg-gradient-to-r from-transparent via-indigo-500 to-transparent" style={{ animation: 'data-flow 2.5s linear infinite' }}></div>
+                                                    </div>
+                                                    <div className="bg-slate-800/60 border border-slate-700/40 rounded-md px-2 py-1 flex items-center gap-1">
+                                                        <span className="text-[8px]">&#x2601;</span>
+                                                        <span className="text-[8px] font-mono text-slate-400">INTERNET</span>
+                                                    </div>
+                                                    <div className="w-12 lg:w-16 h-0.5 bg-slate-700/40 relative overflow-hidden rounded-full">
+                                                        <div className="absolute top-0 h-full w-6 bg-gradient-to-r from-transparent via-cyan-500 to-transparent" style={{ animation: 'data-flow 2.5s linear infinite 0.5s' }}></div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-col items-center gap-2.5">
+                                                    <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">&#x2601; DO DROPLET (137.184.6.184)</div>
+                                                    <div className="bg-slate-800/40 border border-slate-700/50 rounded-xl p-2.5 space-y-1.5 min-w-[120px]" style={{ animation: 'node-pulse 3s ease-in-out infinite 1.5s' }}>
+                                                        {dropletAgentIds.map(id => { const a = getAgent(id); const c = COLORS[id]; return (
+                                                            <div key={id} className="flex items-center gap-1.5 bg-[#11111b]/90 rounded-lg px-2 py-1 border" style={{ borderColor: c.border + '40' }}>
+                                                                <StatusDot status={a?.status || 'offline'} /><span className="text-[9px] font-bold" style={{ color: c.text }}>{shortName[id]}</span>
+                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">K2.5</span>
+                                                            </div>
+                                                        ); })}
+                                                    </div>
+                                                </div>
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+
+                                    {/* Legend */}
+                                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-3 text-[7px] text-slate-500">
+                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online</span>
+                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500"></span>Sleeping</span>
+                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>Offline</span>
+                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-cyan-500"></span>Telegram</span>
+                                        <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>iMessage</span>
+                                    </div>
+                                </div>
+                            </section>
+
+                            {/* Activity Feed */}
+                            <section className="bg-[#0e0e16]/90 border border-slate-800/60 rounded-2xl flex flex-col overflow-hidden">
+                                <div className="p-3 border-b border-slate-800/50 flex items-center justify-between">
+                                    <h3 className="text-[10px] font-bold text-white flex items-center gap-1.5">
+                                        <span>&#x1F4E1;</span> Activity Feed
+                                    </h3>
+                                    <span className="flex items-center gap-1 text-[8px] font-bold text-red-400">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>LIVE
+                                    </span>
+                                </div>
+                                <div className="flex-1 p-3 space-y-3 overflow-y-auto custom-scrollbar">
+                                    {liveActivity.map((item, i) => (
+                                        <div key={i} className="flex items-start gap-2.5">
+                                            <div className="w-5 h-5 rounded-full flex items-center justify-center text-[7px] font-bold flex-shrink-0 mt-0.5"
+                                                style={{ backgroundColor: COLORS[item.agent]?.bg, color: COLORS[item.agent]?.text, border: `1px solid ${COLORS[item.agent]?.border}40` }}>
+                                                {agents.find(a => a.id === item.agent)?.name[0]}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                    <span className="text-[9px] font-bold" style={{ color: COLORS[item.agent]?.text }}>{agents.find(a => a.id === item.agent)?.name}</span>
+                                                    <span className="text-[8px] text-slate-600">{item.time}</span>
+                                                </div>
+                                                <p className="text-[9px] text-slate-400 leading-relaxed">{item.text}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+                        </div>
+
+                        {/* ── CRON JOBS ── */}
+                        <section className="bg-[#0e0e16]/90 border border-slate-800 rounded-2xl overflow-hidden">
+                            <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+                                <h3 className="text-xs font-bold text-white flex items-center gap-2"><span>&#x23F0;</span> Cron Jobs</h3>
+                                <button className="text-slate-500 hover:text-slate-300 transition-all text-xs">&#x2B06;</button>
+                            </div>
+                            <div className="flex overflow-x-auto custom-scrollbar">
+                                {liveAgents.map((agent, idx) => {
+                                    const c = COLORS[agent.id];
+                                    const jobs = liveCrons[agent.id] || [];
+                                    if (jobs.length === 0) return null;
+                                    return (
+                                        <div key={agent.id} className="p-3 flex-shrink-0 w-[200px]" style={{ borderRight: idx < agents.length - 1 ? '1px solid rgba(51,65,85,0.25)' : 'none' }}>
+                                            <div className="flex items-center gap-2 mb-2.5">
+                                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.border }}></span>
+                                                <span className="text-[9px] font-bold uppercase" style={{ color: c.text }}>{agent.name}</span>
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                {jobs.map((job, i) => (
+                                                    <div key={i} className="bg-[#11111b]/90 border border-slate-800/40 rounded-lg p-2">
+                                                        <div className="flex items-center justify-between mb-0.5">
+                                                            <span className="text-[9px] font-bold text-white truncate mr-1">{job.name}</span>
+                                                            <Badge color={job.status === 'active' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)'}
+                                                                textColor={job.status === 'active' ? '#34d399' : '#f87171'} small>
+                                                                {job.status.toUpperCase()}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-[7px] text-slate-500">
+                                                            <span className="font-mono">{job.cron}</span>
+                                                            {job.next && <span className="text-slate-400">&#x27A1; {job.next}</span>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </section>
+
+                    </main>
+
+                    {/* Task Detail Modal */}
+                    {detailTask && (
+                        <TaskDetailModal
+                            task={detailTask}
+                            colId={detailColId}
+                            columns={boardColumns}
+                            onClose={() => { setDetailTask(null); setDetailColId(null); }}
+                            onUpdate={handleTaskUpdate}
+                        />
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<AuthGate><App /></AuthGate>);
+    </script>
+</body>
+</html>

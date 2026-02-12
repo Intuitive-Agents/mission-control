@@ -1,0 +1,219 @@
+#!/usr/bin/env python3
+"""
+Lux Browser Daemon — Polls for browser tasks, executes via OpenAGI Lux on Mac mini.
+
+Architecture:
+  Scout (droplet) → POST task to D1 → Lux Daemon polls → runs oagi → PUTs result back
+
+Runs on Iva's Mac mini with screen recording + accessibility permissions.
+"""
+
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.request
+from datetime import datetime
+
+# === CONFIG ===
+TASKS_API = "https://ars-recruiting.xyz/api/browser-tasks"
+POLL_KEY = "lux-browser-2026"
+SUBMIT_KEY = "lux-browser-2026"
+POLL_INTERVAL = 5  # seconds
+OAGI_BIN = os.path.expanduser("~/clawd/.venv/bin/oagi")
+OAGI_API_KEY = "sk-US6ZW5B1Ea1Y4syWxrQIXe_tkyHotoMQn89rhkU6KFc"
+EXPORT_DIR = os.path.expanduser("~/clawd/mission-control/relay/lux-exports")
+
+# Ensure export dir exists
+os.makedirs(EXPORT_DIR, exist_ok=True)
+
+
+def log(msg):
+    ts = datetime.now().strftime("%H:%M:%S")
+    print(f"[{ts}] {msg}", flush=True)
+
+
+def api_request(method, params="", body=None):
+    """Make a request to the browser tasks API."""
+    url = f"{TASKS_API}?key={POLL_KEY}&{params}" if params else f"{TASKS_API}?key={POLL_KEY}"
+    
+    if body:
+        data = json.dumps(body).encode()
+        req = urllib.request.Request(url, data=data, method=method)
+        req.add_header("Content-Type", "application/json")
+    else:
+        req = urllib.request.Request(url, method=method)
+    
+    req.add_header("User-Agent", "LuxDaemon/1.0")
+    
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            return json.loads(resp.read().decode())
+    except Exception as e:
+        log(f"API error: {e}")
+        return None
+
+
+def get_pending_tasks():
+    """Fetch pending browser tasks."""
+    result = api_request("GET", "status=pending")
+    if result and "tasks" in result:
+        return result["tasks"]
+    return []
+
+
+def update_task(task_id, status, result=None, error=None):
+    """Update task status in D1."""
+    body = {"task_id": task_id, "status": status}
+    if result:
+        body["result"] = result
+    if error:
+        body["error"] = error
+    return api_request("PUT", "", body)
+
+
+def run_lux(instruction, max_steps=15, mode="actor"):
+    """Execute a browser task via Lux (oagi)."""
+    export_file = os.path.join(EXPORT_DIR, f"task-{int(time.time())}.json")
+    
+    env = os.environ.copy()
+    env["OAGI_API_KEY"] = OAGI_API_KEY
+    env["PATH"] = f"/usr/sbin:/usr/bin:/bin:/usr/local/bin:{env.get('PATH', '')}"
+    
+    cmd = [
+        OAGI_BIN, "agent", "run",
+        instruction,
+        "--mode", mode,
+        "--max-steps", str(max_steps),
+        "--export", "json",
+        "--export-file", export_file,
+        "--step-delay", "1.5",  # Slightly slower for anti-detection
+    ]
+    
+    log(f"  Running Lux: {instruction[:80]}...")
+    
+    try:
+        proc = subprocess.run(
+            cmd,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=max_steps * 30,  # ~30s per step max
+        )
+        
+        stdout = proc.stdout
+        stderr = proc.stderr
+        
+        # Parse the export file for structured results
+        result_data = None
+        if os.path.exists(export_file):
+            with open(export_file) as f:
+                result_data = json.load(f)
+        
+        # Extract step thoughts/actions from export
+        if result_data:
+            # Export can be a list of step objects or a dict
+            steps = result_data if isinstance(result_data, list) else result_data.get("steps", [])
+            
+            last_thoughts = []
+            actions = []
+            for step in steps:
+                if not isinstance(step, dict):
+                    continue
+                # Extract reasoning and actions from step data
+                step_data = step.get("step", {})
+                if isinstance(step_data, dict):
+                    reason = step_data.get("reason", "") or step_data.get("thought", "")
+                    step_actions = step_data.get("actions", [])
+                    if reason:
+                        last_thoughts.append(reason)
+                    for a in (step_actions if isinstance(step_actions, list) else []):
+                        if isinstance(a, dict):
+                            actions.append(f"{a.get('type','?')}({a.get('argument','')})")
+                        else:
+                            actions.append(str(a))
+            
+            summary = "\n".join(last_thoughts[-3:]) if last_thoughts else "Task completed"
+            total_steps = len(steps)
+            
+            result_text = json.dumps({
+                "status": "completed",
+                "total_steps": total_steps,
+                "summary": summary,
+                "last_actions": actions[-3:],
+                "export_file": export_file,
+            })
+        else:
+            result_text = json.dumps({
+                "status": "completed",
+                "stdout": stdout[-500:] if stdout else "",
+                "stderr": stderr[-200:] if stderr else "",
+            })
+        
+        if proc.returncode != 0:
+            return None, f"Lux exited with code {proc.returncode}: {stderr[-200:]}"
+        
+        return result_text, None
+        
+    except subprocess.TimeoutExpired:
+        return None, "Lux timed out"
+    except Exception as e:
+        return None, f"Lux error: {str(e)}"
+
+
+def process_task(task):
+    """Process a single browser task."""
+    task_id = task["task_id"]
+    instruction = task["instruction"]
+    max_steps = task.get("max_steps", 15)
+    mode = task.get("mode", "actor")
+    
+    log(f"Processing task {task_id[:8]}...")
+    log(f"  Instruction: {instruction[:100]}")
+    
+    # Mark as running
+    update_task(task_id, "running")
+    
+    # Execute via Lux
+    result, error = run_lux(instruction, max_steps, mode)
+    
+    if error:
+        log(f"  FAILED: {error}")
+        update_task(task_id, "failed", error=error)
+    else:
+        log(f"  COMPLETED")
+        update_task(task_id, "completed", result=result)
+    
+    return error is None
+
+
+def main():
+    log("=== Lux Browser Daemon Starting ===")
+    log(f"API: {TASKS_API}")
+    log(f"Lux: {OAGI_BIN}")
+    log(f"Poll interval: {POLL_INTERVAL}s")
+    log("")
+    
+    # Verify oagi is available
+    if not os.path.exists(OAGI_BIN):
+        log(f"ERROR: oagi not found at {OAGI_BIN}")
+        sys.exit(1)
+    
+    while True:
+        try:
+            tasks = get_pending_tasks()
+            
+            if tasks:
+                log(f"Found {len(tasks)} pending task(s)")
+                for task in tasks:
+                    process_task(task)
+            
+        except Exception as e:
+            log(f"Poll error: {e}")
+        
+        time.sleep(POLL_INTERVAL)
+
+
+if __name__ == "__main__":
+    main()
