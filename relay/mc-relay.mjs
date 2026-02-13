@@ -27,6 +27,7 @@ const AGENTS = {
   arvis_recruit: { host: '137.184.6.184', port: 18795, token: 'recruiting-arvis-2026' },
   arvis_admin:   { host: '137.184.6.184', port: 18800, token: 'admin-arvis-2026' },
   arvis_prod:    { host: '137.184.6.184', port: 18796, token: 'production-arvis-2026' },
+  scout:         { host: '137.184.6.184', port: 18801, token: 'scout-linkedin-2026' },  // TODO: verify port/token
   // These are bound to 127.0.0.1 on droplet - need SSH tunnel or droplet relay
   // ivan:       { host: '137.184.6.184', port: 18789, token: 'e666fef9b12f...' },
   // tia:        { host: '137.184.6.184', port: 18790, token: '683abb241845...' },

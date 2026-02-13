@@ -8,6 +8,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
         tailwind.config = {
@@ -98,6 +99,38 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .grid-bg { background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px); background-size: 20px 20px; }
+        /* Markdown rendered content styles */
+        .md-content { font-size: 11px; line-height: 1.6; color: #cbd5e1; }
+        .md-content h1 { font-size: 14px; font-weight: 700; color: #f1f5f9; margin: 12px 0 6px 0; }
+        .md-content h2 { font-size: 12.5px; font-weight: 700; color: #e2e8f0; margin: 10px 0 5px 0; }
+        .md-content h3 { font-size: 11.5px; font-weight: 700; color: #e2e8f0; margin: 8px 0 4px 0; }
+        .md-content h4, .md-content h5, .md-content h6 { font-size: 11px; font-weight: 700; color: #e2e8f0; margin: 6px 0 3px 0; }
+        .md-content p { margin: 4px 0; }
+        .md-content strong { color: #f1f5f9; font-weight: 600; }
+        .md-content em { color: #a5b4fc; font-style: italic; }
+        .md-content a { color: #818cf8; text-decoration: underline; text-underline-offset: 2px; }
+        .md-content a:hover { color: #a5b4fc; }
+        .md-content ul, .md-content ol { margin: 4px 0; padding-left: 18px; }
+        .md-content li { margin: 2px 0; color: #94a3b8; }
+        .md-content li::marker { color: #475569; }
+        .md-content code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 10px; background: rgba(15,17,28,0.8); color: #a5b4fc; padding: 1px 5px; border-radius: 4px; border: 1px solid rgba(51,65,85,0.3); }
+        .md-content pre { margin: 6px 0; padding: 10px 12px; background: rgba(10,12,20,0.9); border: 1px solid rgba(51,65,85,0.3); border-radius: 8px; overflow-x: auto; }
+        .md-content pre code { background: none; border: none; padding: 0; color: #a5b4fc; font-size: 10px; line-height: 1.5; }
+        .md-content blockquote { margin: 6px 0; padding: 4px 10px; border-left: 3px solid rgba(99,102,241,0.4); background: rgba(99,102,241,0.05); color: #94a3b8; border-radius: 0 6px 6px 0; }
+        .md-content table { width: 100%; border-collapse: collapse; margin: 6px 0; font-size: 10px; }
+        .md-content th { text-align: left; padding: 4px 8px; border-bottom: 1px solid rgba(51,65,85,0.5); color: #e2e8f0; font-weight: 600; }
+        .md-content td { padding: 3px 8px; border-bottom: 1px solid rgba(51,65,85,0.2); color: #94a3b8; }
+        .md-content tr:hover td { background: rgba(51,65,85,0.1); }
+        .md-content hr { border: none; border-top: 1px solid rgba(51,65,85,0.3); margin: 8px 0; }
+        .md-content img { max-width: 100%; border-radius: 8px; margin: 6px 0; border: 1px solid rgba(51,65,85,0.3); }
+        .md-content input[type="checkbox"] { margin-right: 6px; accent-color: #6366f1; }
+        .md-content > *:first-child { margin-top: 0; }
+        .md-content > *:last-child { margin-bottom: 0; }
+        /* Chat attachment styles */
+        .chat-img-preview { max-width: 240px; max-height: 200px; border-radius: 8px; border: 1px solid rgba(51,65,85,0.3); cursor: pointer; transition: opacity 0.2s; }
+        .chat-img-preview:hover { opacity: 0.85; }
+        .chat-file-link { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: rgba(15,17,28,0.8); border: 1px solid rgba(51,65,85,0.3); border-radius: 8px; color: #818cf8; font-size: 10px; text-decoration: none; transition: background 0.2s; }
+        .chat-file-link:hover { background: rgba(99,102,241,0.1); }
         .reasoning-line { animation: slide-in 0.3s ease-out forwards; }
         .trace-grid-bg { background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 16px 16px; }
         .error-scanline { background: linear-gradient(90deg, transparent 0%, rgba(239,68,68,0.08) 50%, transparent 100%); background-size: 200% 100%; animation: error-scan 2s linear infinite; }
@@ -120,6 +153,7 @@
             arvis_recruit:  { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
             arvis_admin:    { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
             arvis_prod:     { border: '#dbad29', bg: 'rgba(219,173,41,0.1)',  text: '#e8c94a', dot: '#dbad29' },
+            scout:          { border: '#22c55e', bg: 'rgba(34,197,94,0.1)',   text: '#4ade80', dot: '#22c55e' },
             tia:            { border: '#f59e0b', bg: 'rgba(245,158,11,0.1)', text: '#fbbf24', dot: '#f59e0b' },
             joy:            { border: '#60B1CF', bg: 'rgba(96,177,207,0.1)',  text: '#89C4DE', dot: '#60B1CF' },
         };
@@ -128,10 +162,11 @@
         const agents = [
             { id: 'iva',           name: 'Iva',              role: "AGI Copilot",                        model: 'Claude Opus 4.6', modelColor: '#8b5cf6', status: 'online',   heart: '9s ago',  host: "Iva's Mac mini",  channels: ['Telegram', 'iMessage'], sessions: 0, contextUsed: 2,  contextMax: 200, load: 12, assignedTo: 'Nick — Intuitive Labs CEO' },
             { id: 'ivan',          name: 'IVAN',             role: "Research / Creative / Content / SMM", model: 'Kimi K2.5',       modelColor: '#692884', status: 'sleeping', heart: '9h ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 4,  assignedTo: 'Nick — Intuitive Labs' },
-            { id: 'arvis_sales',   name: 'ARVIS (Sales)',    role: "Sales",                              model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '12s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 1, contextUsed: 18, contextMax: 128, load: 22, assignedTo: 'Trenton — Arrow Roofing' },
-            { id: 'arvis_recruit', name: 'ARVIS (Recruiter)',role: "Recruiting",                         model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '30s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 5,  contextMax: 128, load: 9,  assignedTo: 'Trenton — Arrow Roofing' },
-            { id: 'arvis_admin',   name: 'ARVIS (Admin)',    role: "Operations",                         model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'online',   heart: '45s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 3,  contextMax: 128, load: 6,  assignedTo: 'Trenton — Arrow Roofing' },
-            { id: 'arvis_prod',    name: 'ARVIS (Production)', role: "Production",                       model: 'Kimi K2.5',       modelColor: '#dbad29', status: 'sleeping', heart: '2h ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 2,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_sales',   name: 'ARVIS (Sales)',    role: "Sales",                              model: 'MiniMax M2.1',    modelColor: '#dbad29', status: 'online',   heart: '12s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 1, contextUsed: 18, contextMax: 128, load: 22, assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_recruit', name: 'ARVIS (Recruiter)',role: "Recruiting",                         model: 'MiniMax M2.1',    modelColor: '#dbad29', status: 'online',   heart: '30s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 5,  contextMax: 128, load: 9,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_admin',   name: 'ARVIS (Admin)',    role: "Operations",                         model: 'MiniMax M2.1',    modelColor: '#dbad29', status: 'online',   heart: '45s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 3,  contextMax: 128, load: 6,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'arvis_prod',    name: 'ARVIS (Production)', role: "Production",                       model: 'MiniMax M2.1',    modelColor: '#dbad29', status: 'sleeping', heart: '2h ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 2,  assignedTo: 'Trenton — Arrow Roofing' },
+            { id: 'scout',         name: 'SCOUT',            role: "LinkedIn Sourcing",                  model: 'MiniMax M2.1',    modelColor: '#22c55e', status: 'online',   heart: '15s ago', host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 4,  contextMax: 128, load: 8,  assignedTo: 'Arrow Roofing' },
             { id: 'tia',           name: 'TIA',              role: "Trenton's Assistant",                model: 'Kimi K2.5',       modelColor: '#f59e0b', status: 'online',   heart: '9s ago',  host: 'DO Droplet',      channels: ['Telegram'],             sessions: 0, contextUsed: 8,  contextMax: 128, load: 14, assignedTo: 'Trenton — Arrow Roofing' },
             { id: 'joy',           name: 'JOY',              role: "Gina's Assistant",                   model: 'Kimi K2.5',       modelColor: '#60B1CF', status: 'online',   heart: '9s ago',  host: "Iva's Mac mini",  channels: ['iMessage'],             sessions: 0, contextUsed: 0,  contextMax: 128, load: 5,  assignedTo: 'Gina Cordas' },
         ];
@@ -144,7 +179,7 @@
             },
             {
                 id: 'ars', name: 'Arrow Roofing Services', subtitle: 'ARS (Client)', icon: 'dot', color: '#D3BA36',
-                agentIds: ['arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'tia'],
+                agentIds: ['arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'scout', 'tia'],
             },
             {
                 id: 'gbc', name: 'Gina', subtitle: 'GBC (Client)', icon: 'dot', color: '#005AA9',
@@ -206,6 +241,11 @@
             arvis_prod: [
                 { name: 'Crew Schedule Sync', cron: '0 5 * * 1-5', next: 'TOMORROW 5:00 AM', status: 'paused' },
                 { name: 'Material Order Check', cron: '0 7 * * 1,3,5', next: 'WEDNESDAY 7:00 AM', status: 'active' },
+            ],
+            scout: [
+                { name: 'LinkedIn Search', cron: '0 8,14 * * 1-5', next: 'TOMORROW 8:00 AM', status: 'active' },
+                { name: 'Candidate Outreach', cron: '0 10 * * 1-5', next: 'TOMORROW 10:00 AM', status: 'active' },
+                { name: 'Profile Scrape', cron: '0 6 * * *', next: 'TOMORROW 6:00 AM', status: 'active' },
             ],
             tia: [
                 { name: 'ARS Daily Lead Check', cron: 'M MONDAY 9:00 AM', next: '', status: 'active' },
@@ -729,6 +769,12 @@
                 { text: "Sent follow-up messages to 3 applicants who passed initial screening. Interviews pending for next week.", hasArtifact: false },
                 { text: "Recruiting pipeline: 12 total applicants, 6 screened, 3 interviewing, 1 offer pending.", hasArtifact: false },
             ],
+            scout: [
+                { text: "LinkedIn search complete. Found 8 potential candidates matching roofing experience criteria.", hasArtifact: false },
+                { text: "Sent connection requests to 5 top candidates. 2 have already accepted.", hasArtifact: false },
+                { text: "Profile analysis: 3 candidates have supervisor experience, 2 have commercial roofing background.", hasArtifact: false },
+                { text: "Outreach sequence started for 4 new connections. First response received from John D.", hasArtifact: false },
+            ],
             arvis_admin: [
                 { text: "Permit status check complete. 2 pending approvals for Johnson and Smith properties. Davis permit approved today.", hasArtifact: false },
                 { text: "Weekly expense report synced. Total field expenses: $4,230. Fuel costs up 8% from last week.", hasArtifact: false },
@@ -825,6 +871,8 @@
             const pollRef = useRef(null);
             const chatRef = useRef(null);
             const inputRef = useRef(null);
+            const fileInputRef = useRef(null);
+            const [pendingFiles, setPendingFiles] = useState([]);
 
             const mcToken = localStorage.getItem('mc_auth_token') || '';
 
@@ -900,8 +948,14 @@
             const activeThread = threads.find(t => t.id === activeThreadId);
             const messages = activeMessages.filter(m => m.text || m.role === 'system' || m.status === 'pending');
 
+            const isNearBottom = useCallback(() => {
+                if (!chatRef.current) return true;
+                const { scrollTop, scrollHeight, clientHeight } = chatRef.current;
+                return scrollHeight - scrollTop - clientHeight < 80;
+            }, []);
+
             useEffect(() => {
-                if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+                if (chatRef.current && isNearBottom()) chatRef.current.scrollTop = chatRef.current.scrollHeight;
             }, [messages, isTyping, activeThreadId]);
 
             const agentColor = COLORS[selectedAgent];
@@ -950,19 +1004,65 @@
                 setThreads(prev => prev.map(t => t.id === threadId ? { ...t, pinned: !t.pinned } : t));
             };
 
+            const handleFileSelect = (e) => {
+                const files = Array.from(e.target.files);
+                if (!files.length) return;
+                const newFiles = files.map(f => ({
+                    file: f, name: f.name, type: f.type, size: f.size,
+                    preview: f.type.startsWith('image/') ? URL.createObjectURL(f) : null,
+                }));
+                setPendingFiles(prev => [...prev, ...newFiles]);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+            };
+
+            const removePendingFile = (idx) => {
+                setPendingFiles(prev => {
+                    const updated = [...prev];
+                    if (updated[idx]?.preview) URL.revokeObjectURL(updated[idx].preview);
+                    updated.splice(idx, 1);
+                    return updated;
+                });
+            };
+
+            const fileToBase64 = (file) => new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+
             const sendMessage = async () => {
-                if (!inputValue.trim()) return;
+                if (!inputValue.trim() && pendingFiles.length === 0) return;
                 const content = inputValue.trim();
                 setInputValue('');
+                const filesToSend = [...pendingFiles];
+                setPendingFiles([]);
                 setIsTyping(true);
 
+                // Build display text
+                const fileNames = filesToSend.map(f => `📎 ${f.name}`).join('\n');
+                const displayText = [content, fileNames].filter(Boolean).join('\n');
+
                 // Optimistically add user message to UI
-                const tempUserMsg = { id: 'tmp-' + Date.now(), role: 'user', agent: selectedAgent, text: content, time: new Date(), status: 'delivered' };
+                const tempUserMsg = {
+                    id: 'tmp-' + Date.now(), role: 'user', agent: selectedAgent, text: displayText, time: new Date(), status: 'delivered',
+                    attachments: filesToSend.map(f => ({ name: f.name, type: f.type, size: f.size, url: f.preview })),
+                };
                 setActiveMessages(prev => [...prev, tempUserMsg]);
+
+                // Convert files to base64 for API
+                let attachments = [];
+                for (const f of filesToSend) {
+                    try {
+                        const b64 = await fileToBase64(f.file);
+                        attachments.push({ name: f.name, type: f.type, size: f.size, data: b64 });
+                    } catch (e) { console.error('File encode failed:', e); }
+                }
 
                 // Determine if we need a new thread or existing
                 const isNewThread = activeThread?.isNew;
-                const body = { agentId: selectedAgent, content };
+                const body = { agentId: selectedAgent, content: content || '(file attachment)' };
+                if (attachments.length > 0) body.attachments = attachments;
                 if (!isNewThread && activeThreadId) body.threadId = activeThreadId;
 
                 try {
@@ -995,6 +1095,25 @@
             };
 
             const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } };
+            const handlePaste = (e) => {
+                const items = e.clipboardData?.items;
+                if (!items) return;
+                const imageFiles = [];
+                for (const item of items) {
+                    if (item.type.startsWith('image/')) {
+                        const file = item.getAsFile();
+                        if (file) imageFiles.push(file);
+                    }
+                }
+                if (imageFiles.length > 0) {
+                    e.preventDefault();
+                    const newFiles = imageFiles.map(f => ({
+                        file: f, name: f.name || `pasted-image-${Date.now()}.png`, type: f.type, size: f.size,
+                        preview: URL.createObjectURL(f),
+                    }));
+                    setPendingFiles(prev => [...prev, ...newFiles]);
+                }
+            };
             const formatTime = (d) => d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
             const formatDate = (d) => {
                 const now = new Date();
@@ -1006,6 +1125,29 @@
                 return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
             };
 
+            // Configure marked for chat markdown rendering
+            const markedOpts = { breaks: true, gfm: true };
+            if (typeof marked !== 'undefined') {
+                marked.setOptions(markedOpts);
+            }
+
+            const renderChatMarkdown = (text) => {
+                if (!text) return '';
+                try {
+                    return typeof marked !== 'undefined' ? marked.parse(text) : text.replace(/</g, '&lt;').replace(/\n/g, '<br>');
+                } catch (e) {
+                    return text.replace(/</g, '&lt;').replace(/\n/g, '<br>');
+                }
+            };
+
+            // Extract image URLs and file links from message text
+            const IMAGE_URL_RE = /(https?:\/\/[^\s<>"]+?\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"]*)?)/gi;
+            const extractImages = (text) => {
+                if (!text) return [];
+                return [...text.matchAll(IMAGE_URL_RE)].map(m => m[1]);
+            };
+
+            // Legacy renderMarkdown kept for other uses (execution trace, etc.)
             const renderMarkdown = (text) => {
                 return text.split('\n').map((line, i) => {
                     if (line.startsWith('# ')) return <div key={i} className="text-base font-bold text-white mb-2 mt-3">{line.slice(2)}</div>;
@@ -1214,8 +1356,16 @@
                                             </div>
                                         ) : msg.role === 'user' ? (
                                             <div className="max-w-[75%] flex flex-col items-end gap-1">
+                                                {msg.attachments && msg.attachments.filter(a => a.type && a.type.startsWith('image/')).map((att, ai) => (
+                                                    <img key={ai} src={att.url || att.data} className="chat-img-preview" alt={att.name || 'attachment'} />
+                                                ))}
+                                                {msg.attachments && msg.attachments.filter(a => !a.type || !a.type.startsWith('image/')).map((att, ai) => (
+                                                    <a key={ai} href={att.url || att.data} target="_blank" rel="noopener noreferrer" className="chat-file-link">
+                                                        &#x1F4CE; {att.name || 'File'} {att.size ? `(${(att.size / 1024).toFixed(1)}KB)` : ''}
+                                                    </a>
+                                                ))}
                                                 <div className="px-3.5 py-2.5 rounded-2xl rounded-br-md text-[11px] text-white leading-relaxed"
-                                                    style={{ backgroundColor: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.25)' }}>
+                                                    style={{ backgroundColor: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.25)', whiteSpace: 'pre-wrap' }}>
                                                     {msg.text}
                                                 </div>
                                                 <span className="text-[8px] text-slate-600 px-1">You {'\u2192'} {agents.find(a => a.id === msg.agent)?.name} &middot; {formatTime(msg.time)}</span>
@@ -1232,10 +1382,29 @@
                                                         <span className="text-[8px] text-slate-600">{formatTime(msg.time)}</span>
                                                         {msg.status === 'error' && <span className="text-[8px] text-red-400 font-bold">ERROR</span>}
                                                     </div>
-                                                    <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-md text-[11px] text-slate-300 leading-relaxed"
-                                                        style={{ backgroundColor: 'rgba(30,32,48,0.8)', border: '1px solid rgba(51,65,85,0.3)' }}>
-                                                        {msg.text}
+                                                    <div className="px-3.5 py-2.5 rounded-2xl rounded-tl-md leading-relaxed md-content"
+                                                        style={{ backgroundColor: 'rgba(30,32,48,0.8)', border: '1px solid rgba(51,65,85,0.3)' }}
+                                                        dangerouslySetInnerHTML={{ __html: renderChatMarkdown(msg.text) }}>
                                                     </div>
+                                                    {/* Inline images extracted from message */}
+                                                    {extractImages(msg.text).map((imgUrl, imgIdx) => (
+                                                        <a key={imgIdx} href={imgUrl} target="_blank" rel="noopener noreferrer">
+                                                            <img src={imgUrl} className="chat-img-preview mt-1" alt="attachment"
+                                                                onError={e => { e.target.style.display = 'none'; }} />
+                                                        </a>
+                                                    ))}
+                                                    {/* File attachments from msg.attachments */}
+                                                    {msg.attachments && msg.attachments.map((att, attIdx) => (
+                                                        att.type && att.type.startsWith('image/') ? (
+                                                            <a key={attIdx} href={att.url} target="_blank" rel="noopener noreferrer">
+                                                                <img src={att.url} className="chat-img-preview mt-1" alt={att.name || 'image'} />
+                                                            </a>
+                                                        ) : (
+                                                            <a key={attIdx} href={att.url} target="_blank" rel="noopener noreferrer" className="chat-file-link mt-1">
+                                                                &#x1F4CE; {att.name || 'File'} {att.size ? `(${(att.size / 1024).toFixed(1)}KB)` : ''}
+                                                            </a>
+                                                        )
+                                                    ))}
                                                     {msg.hasArtifact && msg.artifactId && (
                                                         <button onClick={() => openArtifact(msg.artifactId)}
                                                             className="flex items-center gap-2 mt-1 px-3 py-2 rounded-xl border transition-all hover:border-slate-600 self-start"
@@ -1273,16 +1442,47 @@
 
                             {/* Input Area */}
                             <div className="p-3 border-t border-slate-800/50" style={{ backgroundColor: 'rgba(10,11,18,0.9)' }}>
+                                {/* Pending file previews */}
+                                {pendingFiles.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mb-2 px-1">
+                                        {pendingFiles.map((pf, pfIdx) => (
+                                            <div key={pfIdx} className="relative group">
+                                                {pf.preview ? (
+                                                    <img src={pf.preview} className="w-16 h-16 object-cover rounded-lg border border-slate-700/50" alt={pf.name} />
+                                                ) : (
+                                                    <div className="w-16 h-16 rounded-lg border border-slate-700/50 flex flex-col items-center justify-center bg-slate-900/70">
+                                                        <span className="text-lg">&#x1F4CE;</span>
+                                                        <span className="text-[7px] text-slate-500 truncate max-w-[56px] mt-0.5">{pf.name}</span>
+                                                    </div>
+                                                )}
+                                                <button onClick={() => removePendingFile(pfIdx)}
+                                                    className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500/90 text-white text-[8px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    title="Remove">&#x2715;</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 <div className="flex items-end gap-2">
+                                    {/* Hidden file input */}
+                                    <input ref={fileInputRef} type="file" multiple accept="image/*,.pdf,.txt,.csv,.json,.md,.doc,.docx,.xls,.xlsx"
+                                        className="hidden" onChange={handleFileSelect} />
+                                    {/* Attach button */}
+                                    <button onClick={() => fileInputRef.current?.click()}
+                                        className="p-2.5 rounded-xl text-slate-500 hover:text-indigo-400 hover:bg-slate-800/60 transition-all flex-shrink-0"
+                                        title="Attach file" style={{ border: '1px solid rgba(51,65,85,0.3)' }}>
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                                        </svg>
+                                    </button>
                                     <div className="flex-1 relative">
-                                        <textarea ref={inputRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown}
+                                        <textarea ref={inputRef} value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyDown={handleKeyDown} onPaste={handlePaste}
                                             placeholder={`Message ${agentName}...`} rows={1}
                                             className="w-full bg-slate-900/70 border border-slate-700/50 rounded-xl px-4 py-2.5 text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-indigo-500/40 placeholder-slate-600 resize-none leading-relaxed"
                                             style={{ minHeight: '40px', maxHeight: '100px' }} />
                                     </div>
-                                    <button onClick={sendMessage} disabled={!inputValue.trim() || isTyping}
+                                    <button onClick={sendMessage} disabled={(!inputValue.trim() && pendingFiles.length === 0) || isTyping}
                                         className="px-4 py-2.5 rounded-xl text-[10px] font-bold transition-all flex items-center gap-1.5 flex-shrink-0 disabled:opacity-40"
-                                        style={{ backgroundColor: inputValue.trim() && !isTyping ? '#6366f1' : '#1e293b', color: inputValue.trim() && !isTyping ? 'white' : '#475569' }}>
+                                        style={{ backgroundColor: (inputValue.trim() || pendingFiles.length > 0) && !isTyping ? '#6366f1' : '#1e293b', color: (inputValue.trim() || pendingFiles.length > 0) && !isTyping ? 'white' : '#475569' }}>
                                         Send &#x27A1;
                                     </button>
                                 </div>
@@ -1909,21 +2109,35 @@
 
                     <main className="p-4 md:p-5 max-w-[1920px] mx-auto space-y-4 relative z-10">
                         {/* ── KPI ROW ── */}
-                        <div className="flex flex-wrap gap-1.5">
-                            {[
-                                { icon: '&#x1F4AC;', label: 'SESSIONS', val: '0', color: '#8b5cf6' },
-                                { icon: '&#x1F4B0;', label: 'TOKENS', val: '0', color: '#eab308' },
-                                { icon: '&#x26A1;', label: 'COST', val: '$0.00', color: '#10b981' },
-                                { icon: '&#x1F6E1;', label: 'UPTIME', val: '100.0%', color: '#3b82f6' },
-                                { icon: '&#x1F4E8;', label: 'MESSAGES', val: '0', color: '#ec4899' },
-                            ].map((kpi, i) => (
-                                <div key={i} className="bg-[#0e0e16]/80 border border-slate-800/50 rounded-md px-2.5 py-1 flex items-center gap-2 hover:border-slate-700 transition-all">
-                                    <span dangerouslySetInnerHTML={{ __html: kpi.icon }} className="text-[8px]"></span>
-                                    <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">{kpi.label}</span>
-                                    <span className="text-[11px] font-bold font-mono" style={{ color: kpi.color }}>{kpi.val}</span>
+                        {(() => {
+                            // Aggregate KPIs from live agent data
+                            const totalSessions = liveAgents.reduce((sum, a) => sum + (a.sessions || 0), 0);
+                            const totalContext = liveAgents.reduce((sum, a) => sum + (a.contextUsed || 0), 0);
+                            const onlineCount = liveAgents.filter(a => a.status === 'online').length;
+                            const uptimePercent = liveAgents.length > 0 ? ((onlineCount / liveAgents.length) * 100).toFixed(1) : '0.0';
+                            // Estimate tokens/cost (contextUsed is in K tokens, rough estimate)
+                            const estTokens = totalContext * 1000;
+                            const estCost = (totalContext * 0.015).toFixed(2); // ~$0.015 per 1K tokens average
+                            const msgCount = liveActivity?.length || 0;
+                            
+                            return (
+                                <div className="flex flex-wrap gap-1.5">
+                                    {[
+                                        { icon: '&#x1F4AC;', label: 'SESSIONS', val: totalSessions.toString(), color: '#8b5cf6' },
+                                        { icon: '&#x1F4B0;', label: 'TOKENS', val: estTokens > 1000 ? `${(estTokens/1000).toFixed(1)}K` : estTokens.toString(), color: '#eab308' },
+                                        { icon: '&#x26A1;', label: 'COST', val: `$${estCost}`, color: '#10b981' },
+                                        { icon: '&#x1F6E1;', label: 'UPTIME', val: `${uptimePercent}%`, color: '#3b82f6' },
+                                        { icon: '&#x1F4E8;', label: 'ACTIVITY', val: msgCount.toString(), color: '#ec4899' },
+                                    ].map((kpi, i) => (
+                                        <div key={i} className="bg-[#0e0e16]/80 border border-slate-800/50 rounded-md px-2.5 py-1 flex items-center gap-2 hover:border-slate-700 transition-all">
+                                            <span dangerouslySetInnerHTML={{ __html: kpi.icon }} className="text-[8px]"></span>
+                                            <span className="text-[7px] font-bold text-slate-500 uppercase tracking-wider">{kpi.label}</span>
+                                            <span className="text-[11px] font-bold font-mono" style={{ color: kpi.color }}>{kpi.val}</span>
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
+                            );
+                        })()}
 
                         {/* ── CLIENT GROUPS (Wallet-Style Stacked Agent Cards) ── */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
@@ -2004,10 +2218,17 @@
                                         {/* Local Cluster — Iva's Mac mini */}
                                         {(() => {
                                             const localAgentIds = ['iva', 'joy'];
-                                            const dropletAgentIds = ['ivan', 'arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'tia'];
+                                            const dropletAgentIds = ['ivan', 'arvis_sales', 'arvis_recruit', 'arvis_admin', 'arvis_prod', 'scout', 'tia'];
                                             const getAgent = (id) => liveAgents.find(a => a.id === id) || agents.find(a => a.id === id);
-                                            const shortName = { iva: 'Iva', joy: 'JOY', ivan: 'IVAN', arvis_sales: 'ARVIS-S', arvis_recruit: 'ARVIS-R', arvis_admin: 'ARVIS-A', arvis_prod: 'ARVIS-P', tia: 'TIA' };
-                                            const shortModel = { iva: 'Opus 4.6' };
+                                            const shortName = { iva: 'Iva', joy: 'JOY', ivan: 'IVAN', arvis_sales: 'ARVIS-S', arvis_recruit: 'ARVIS-R', arvis_admin: 'ARVIS-A', arvis_prod: 'ARVIS-P', scout: 'SCOUT', tia: 'TIA' };
+                                            const shortModel = (id) => {
+                                                const a = getAgent(id);
+                                                if (!a?.model) return 'K2.5';
+                                                if (a.model.includes('Opus')) return 'Opus 4.6';
+                                                if (a.model.includes('MiniMax')) return 'M2.1';
+                                                if (a.model.includes('Kimi')) return 'K2.5';
+                                                return a.model.slice(0, 8);
+                                            };
                                             return (
                                                 <>
                                                 <div className="flex flex-col items-center gap-2.5">
@@ -2016,7 +2237,7 @@
                                                         {localAgentIds.map(id => { const a = getAgent(id); const c = COLORS[id]; return (
                                                             <div key={id} className="flex items-center gap-1.5 bg-[#11111b]/90 rounded-lg px-2 py-1.5 border" style={{ borderColor: c.border + '40' }}>
                                                                 <StatusDot status={a?.status || 'offline'} /><span className="text-[9px] font-bold" style={{ color: c.text }}>{shortName[id]}</span>
-                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">{shortModel[id] || 'K2.5'}</span>
+                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">{shortModel(id)}</span>
                                                             </div>
                                                         ); })}
                                                     </div>
@@ -2041,7 +2262,7 @@
                                                         {dropletAgentIds.map(id => { const a = getAgent(id); const c = COLORS[id]; return (
                                                             <div key={id} className="flex items-center gap-1.5 bg-[#11111b]/90 rounded-lg px-2 py-1 border" style={{ borderColor: c.border + '40' }}>
                                                                 <StatusDot status={a?.status || 'offline'} /><span className="text-[9px] font-bold" style={{ color: c.text }}>{shortName[id]}</span>
-                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">K2.5</span>
+                                                                <span className="text-[7px] text-slate-500 ml-auto font-mono">{shortModel(id)}</span>
                                                             </div>
                                                         ); })}
                                                     </div>

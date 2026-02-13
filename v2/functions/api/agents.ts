@@ -19,10 +19,11 @@ function checkAuth(request: Request, env: Env): Response | null {
 const AGENT_DEFAULTS: Record<string, any> = {
   iva: { name: 'Iva', role: 'AGI Copilot', model: 'Claude Opus 4.6', modelColor: '#8b5cf6', host: "Iva's Mac mini", channels: ['Telegram', 'iMessage'], assignedTo: 'Nick — Intuitive Labs CEO' },
   ivan: { name: 'IVAN', role: 'Research / Creative / Content / SMM', model: 'Kimi K2.5', modelColor: '#692884', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Nick — Intuitive Labs' },
-  arvis_sales: { name: 'ARVIS (Sales)', role: 'Sales', model: 'Kimi K2.5', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
-  arvis_recruit: { name: 'ARVIS (Recruiter)', role: 'Recruiting', model: 'Kimi K2.5', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
-  arvis_admin: { name: 'ARVIS (Admin)', role: 'Operations', model: 'Kimi K2.5', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
-  arvis_prod: { name: 'ARVIS (Production)', role: 'Production', model: 'Kimi K2.5', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
+  arvis_sales: { name: 'ARVIS (Sales)', role: 'Sales', model: 'MiniMax M2.1', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
+  arvis_recruit: { name: 'ARVIS (Recruiter)', role: 'Recruiting', model: 'MiniMax M2.1', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
+  arvis_admin: { name: 'ARVIS (Admin)', role: 'Operations', model: 'MiniMax M2.1', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
+  arvis_prod: { name: 'ARVIS (Production)', role: 'Production', model: 'MiniMax M2.1', modelColor: '#dbad29', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
+  scout: { name: 'SCOUT', role: 'LinkedIn Sourcing', model: 'MiniMax M2.1', modelColor: '#22c55e', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Arrow Roofing' },
   tia: { name: 'TIA', role: "Trenton's Assistant", model: 'Kimi K2.5', modelColor: '#f59e0b', host: 'DO Droplet', channels: ['Telegram'], assignedTo: 'Trenton — Arrow Roofing' },
   joy: { name: 'JOY', role: "Gina's Assistant", model: 'Kimi K2.5', modelColor: '#60B1CF', host: "Iva's Mac mini", channels: ['iMessage'], assignedTo: 'Gina Cordas' },
 };

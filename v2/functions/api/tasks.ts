@@ -54,15 +54,61 @@ const COLUMN_DEFS = [
   { id: 'blocked', title: 'BLOCKED', color: '#ef4444', icon: 'alert-triangle' },
 ];
 
+// ClickUp member ID/username → agent ID mapping
+// Add ClickUp member IDs here as they're discovered
+const CLICKUP_MEMBER_MAP: Record<string, string> = {
+  // Usernames (lowercase)
+  'iva': 'iva',
+  'ivaanne': 'iva',
+  'ivan': 'ivan',
+  'tia': 'tia',
+  'trenton': 'tia',
+  'arvis': 'arvis_sales',
+  'scout': 'scout',
+  'joy': 'joy',
+  'gina': 'joy',
+  // Add ClickUp member IDs as they're discovered
+  // '12345678': 'iva',
+};
+
 // Map assignee names to agent IDs
 function guessAgent(task: any): string {
   const name = (task.name || '').toLowerCase();
-  const assignees = (task.assignees || []).map((a: any) => (a.username || a.email || '').toLowerCase());
-  if (assignees.some((a: string) => a.includes('iva'))) return 'iva';
-  if (assignees.some((a: string) => a.includes('ivan'))) return 'ivan';
-  if (name.includes('tia') || name.includes('trenton')) return 'tia';
-  if (name.includes('arvis') || name.includes('scout')) return 'arvis_recruit';
-  if (name.includes('joy') || name.includes('gina')) return 'joy';
+  const desc = (task.description || '').toLowerCase();
+  const assignees = task.assignees || [];
+  
+  // First try direct assignee mapping
+  for (const assignee of assignees) {
+    const username = (assignee.username || '').toLowerCase();
+    const email = (assignee.email || '').toLowerCase();
+    const id = assignee.id?.toString();
+    
+    // Check direct ID mapping
+    if (id && CLICKUP_MEMBER_MAP[id]) return CLICKUP_MEMBER_MAP[id];
+    
+    // Check username patterns
+    for (const [pattern, agentId] of Object.entries(CLICKUP_MEMBER_MAP)) {
+      if (username.includes(pattern) || email.includes(pattern)) {
+        return agentId;
+      }
+    }
+  }
+  
+  // Fallback: guess from task name or description
+  if (name.includes('tia') || name.includes('trenton') || desc.includes('tia')) return 'tia';
+  if (name.includes('arvis') || desc.includes('arvis')) return 'arvis_sales';
+  if (name.includes('scout') || name.includes('linkedin') || desc.includes('scout')) return 'scout';
+  if (name.includes('joy') || name.includes('gina') || desc.includes('joy')) return 'joy';
+  if (name.includes('ivan') || desc.includes('ivan')) return 'ivan';
+  if (name.includes('iva') || desc.includes('iva')) return 'iva';
+  
+  // Last resort: check for ARS-related keywords → assign to tia
+  if (name.includes('ars') || name.includes('arrow') || name.includes('roofing') || 
+      name.includes('acculynx') || name.includes('ghl') || name.includes('lead')) {
+    return 'tia';
+  }
+  
+  // Default to unassigned indicator (still shows as iva for now, but could be 'unassigned')
   return 'iva';
 }
 
